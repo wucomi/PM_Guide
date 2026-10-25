@@ -2,43 +2,7 @@
 
 基于 `DialogFragment` 的 Android 新手引导 / 聚光灯组件。支持锚点跟随、自动选边、翻边、遮罩挖洞、箭头、挖洞动画、自定义挖洞大小与形状、气泡样式、穿透点击和一次性引导。
 
-本工程分为两个模块：`guide` 是可直接复用的 Android Library，`app` 是 API 使用手册 Demo。不包含设备连接、私有协议或厂商 SDK 依赖。
-
-## 本次更新
-
-- **模块拆分**：引导组件整体移入 `guide`（Android Library，namespace `com.pm.guide`）；Demo 保留在 `app`，通过 `implementation project(':guide')` 依赖。
-- **主题可覆盖**：`guide` 默认使用 `Theme.Material3.DayNight.NoActionBar` 作为 `Theme.Guide.Base`，宿主 App 可以重新定义同名 style 继承自己的主题。
-- **结构精简**：`GuideTooltip` / `GuideArrow` 独立到 `GuideTooltip.kt`；`GuidePositioner` 只负责气泡定位，箭头落点移到 `GuideOverlayView`；移除 `GuideAnchor.IdAnchor`。
-- 新增：`GuideHighlight.holeOverlayColor`，可在挖洞区域叠加半透明高亮色（提亮或强调目标）。
-- **注释与精简**：统一补齐方法/字段注释，移除明显重复或 demo 相关的注释；`GuideOverlayView` 复用布局/绘制对象，默认气泡布局改用 ViewBinding。
-- **修复**：点击“下一步”后气泡不再出现。原因是步骤切换时只监听了 Activity 窗口的 `OnPreDraw`，Dialog 显示期间 Activity 不再重绘，导致新锚点没有被解析、气泡一直停在 `alpha = 0`。现在同时监听引导自身窗口，并在 `bind()` 时立即解析一次锚点。
-- **修复**：引导显示时状态栏没有被遮罩覆盖。Dialog 窗口现在使用 `FLAG_LAYOUT_IN_SCREEN` + `FLAG_LAYOUT_NO_LIMITS` + `setDecorFitsSystemWindows(false)` 铺满整屏，遮罩会覆盖状态栏和导航栏区域；气泡仍只在扣除系统栏后的可用区域内定位。
-- 新增：`GuideTooltip.backgroundColor` / `cornerRadius` / `strokeColor` / `strokeWidth`，以及 `GuideContent.Default.titleColor` / `messageColor`。
-- 新增：`HoleAnimation.Scale` / `HoleAnimation.Fade` 挖洞入场动画。
-- 新增：`HoleShape.Oval` / `HoleShape.Custom`，以及 `GuideHighlight.holeRectProvider` 自定义洞的大小和位置（回调直接拿到锚点 rect）。
-- 新增：`GuideListener.onStepLocated()` 回传 `anchorRect` / `holeRect` / `tooltipRect`。
-- 新增：`GuideStep.passThroughTargetTouch`，洞内触摸穿透到宿主 Activity。
-- 新增：`GuideHighlight.maskRectProvider` 自定义遮罩范围，以及 `GuideStep.passThroughOutsideMask` 让遮罩范围之外保持可交互。
-- 新增：`GuideAnchor.RecyclerViewItemAnchor`，按 adapter position 引导 RecyclerView item，支持自动滚动和 pending 等待。
-- 新增：`GuideContent.CustomBinding`，直接使用 ViewBinding / DataBinding，不再 `findViewById`。
-- 新增：`GuidePlacement.customPosition` 完全自定义气泡位置。
-- Demo 重做：移除固定靶区和底部栏，每个 API 卡片里的按钮本身就是演示锚点；顶部 hero 卡片播放完整三步引导，右上角菜单或 showOnce 卡片里的“重置状态”可以重置状态。页面结构、14 张卡片和按钮全部写在 `activity_main.xml`，`MainActivity` 只负责点击绑定。
-
-## 运行
-
-- 使用 Android Studio 打开工程，或执行 `./gradlew :app:assembleDebug`。
-- 需要 JDK 17（AGP 8.6 / Gradle 8.7）。
-- 启动后进入 API 手册页：顶部 hero 卡片播放完整引导，下面每张卡片对应一组能力，点击卡片里的按钮就会以该按钮为锚点运行引导。
-- 首次进入会自动播放一次欢迎引导；`showOnce` 示例使用独立 key，右上角菜单可以重置状态。
-
-## 模块划分
-
-```text
-guide/   Android Library（namespace com.pm.guide）
-app/     API 使用手册 Demo（依赖 :guide）
-```
-
-宿主接入：
+接入：
 
 ```gradle
 dependencies {
