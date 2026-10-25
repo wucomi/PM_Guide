@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="HandBookSectionView">
+        <attr name="hbNumber" format="integer" />
+        <attr name="hbTitle" format="string" />
+        <attr name="hbDescription" format="string" />
+        <attr name="hbCode" format="string" />
+    </declare-styleable>
+
+    <declare-styleable name="ShapePreviewButton">
+        <attr name="previewShape" format="enum">
+            <enum name="rect" value="0" />
+            <enum name="roundRect" value="1" />
+            <enum name="circle" value="2" />
+            <enum name="oval" value="3" />
+            <enum name="star" value="4" />
+        </attr>
+        <attr name="previewText" format="string" />
+    </declare-styleable>
+
+</resources>

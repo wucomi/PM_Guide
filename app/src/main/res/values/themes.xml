@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.PmGuide" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/guide_primary</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorSecondary">@color/guide_accent</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+    </style>
+
+    <!-- 覆盖 :guide 的默认基础主题，让引导 Dialog 继承 Demo 的品牌色 -->
+    <style name="Theme.Guide.Base" parent="Theme.PmGuide" />
+
+</resources>

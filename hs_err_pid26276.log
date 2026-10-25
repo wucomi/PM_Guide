@@ -1,0 +1,228 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00007ffb873fe453, pid=26276, tid=18836
+#
+# JRE version:  (11.0.25+9) (build )
+# Java VM: OpenJDK 64-Bit Server VM (11.0.25+9-LTS, mixed mode, sharing, tiered, compressed oops, g1 gc, windows-amd64)
+# Problematic frame:
+# V  [jvm.dll+0x1ee453]
+#
+# No core dump will be written. Minidumps are not enabled by default on client versions of Windows
+#
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: 
+
+Host: Intel(R) Core(TM) i5-7300HQ CPU @ 2.50GHz, 4 cores, 15G,  Windows 10 , 64 bit Build 19041 (10.0.19041.5915)
+Time: Sun Oct 25 16:56:41 2026  Windows 10 , 64 bit Build 19041 (10.0.19041.5915) elapsed time: 0.035186 seconds (0d 0h 0m 0s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x000001e569351800):  JavaThread "Unknown thread" [_thread_in_vm, id=18836, stack(0x0000002088f00000,0x0000002089000000)]
+
+Stack: [0x0000002088f00000,0x0000002089000000],  sp=0x0000002088fff020,  free space=1020k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+V  [jvm.dll+0x1ee453]
+V  [jvm.dll+0x1ec583]
+V  [jvm.dll+0x3800fb]
+V  [jvm.dll+0x795f1f]
+V  [jvm.dll+0x3f0a37]
+V  [jvm.dll+0x3f2fa1]
+C  [jli.dll+0x52ef]
+C  [ucrtbase.dll+0x21bb2]
+C  [KERNEL32.DLL+0x17374]
+C  [ntdll.dll+0x4cc91]
+
+
+siginfo: EXCEPTION_ACCESS_VIOLATION (0xc0000005), reading address 0x0000000000000000
+
+
+Registers:
+RAX=0x0000b65c74947d8d, RBX=0x0000000000000000, RCX=0x0000000000000000, RDX=0x0000000000000000
+RSP=0x0000002088fff020, RBP=0x0000000000000000, RSI=0x000001e569351800, RDI=0x0000000000000000
+R8 =0x0000000000000000, R9 =0x0000000000000000, R10=0x0000000000000000, R11=0x0000002088ffedd0
+R12=0x0000000000000000, R13=0x00007ffb877fe1d0, R14=0x0000002088fffd38, R15=0x0000000000000008
+RIP=0x00007ffb873fe453, EFLAGS=0x0000000000010256
+
+Top of Stack: (sp=0x0000002088fff020)
+0x0000002088fff020:   000001e5672bd630 00007ffb874f8bc8
+0x0000002088fff030:   0000000000000008 0000000000000400
+0x0000002088fff040:   0000000000000000 000001e569351800
+0x0000002088fff050:   0000f30068856d95 00007ffb877fe1d0
+0x0000002088fff060:   0000002088fff140 0000000000000008
+0x0000002088fff070:   0000002088fffd38 00007ffb877fe1d0
+0x0000002088fff080:   0000000000000000 00007ffbfd520000
+0x0000002088fff090:   00007ffb87ad7338 0000000000000000
+0x0000002088fff0a0:   00007ffb873fc42a 00007ffc1bd33c0c
+0x0000002088fff0b0:   0000002088fff140 0000000000000001
+0x0000002088fff0c0:   0000b65c74947d8d 0000002088fffd38
+0x0000002088fff0d0:   00007ffb00000000 00007ffb877fe1d0
+0x0000002088fff0e0:   000001e569351800 0000002088fff200
+0x0000002088fff0f0:   000001e5672b0460 00007ffb873fc583
+0x0000002088fff100:   00007ffbfdef0000 00007ffbfd52d0f4
+0x0000002088fff110:   0000002088fff200 000001e569351800 
+
+Instructions: (pc=0x00007ffb873fe453)
+0x00007ffb873fe353:   f0 ff 15 ee 14 62 00 48 8b cb 41 b1 01 48 2b 8c
+0x00007ffb873fe363:   24 90 00 00 00 45 33 c0 33 d2 c6 04 31 00 48 8b
+0x00007ffb873fe373:   ce e8 c7 0b 00 00 42 80 3c 33 3b 4a 8d 3c 33 75
+0x00007ffb873fe383:   1c 0f 1f 40 00 0f 1f 84 00 00 00 00 00 48 ff c3
+0x00007ffb873fe393:   ff c5 42 80 3c 33 3b 4a 8d 3c 33 74 f0 49 83 3c
+0x00007ffb873fe3a3:   24 00 74 18 48 8b 94 24 98 00 00 00 49 8b cf e8
+0x00007ffb873fe3b3:   59 46 ed ff 49 8b cc e8 c1 45 ed ff 48 8b 44 24
+0x00007ffb873fe3c3:   20 48 8d 4c 24 30 4d 89 67 10 49 89 47 18 48 8b
+0x00007ffb873fe3d3:   44 24 28 49 89 47 20 e8 61 b2 0f 00 44 8b ed 48
+0x00007ffb873fe3e3:   89 9c 24 90 00 00 00 48 3b 5c 24 38 0f 8c cd fe
+0x00007ffb873fe3f3:   ff ff 4c 8b 7c 24 40 4c 8b 64 24 48 48 8b 7c 24
+0x00007ffb873fe403:   50 48 8b 74 24 58 48 8b 9c 24 80 00 00 00 48 83
+0x00007ffb873fe413:   c4 60 41 5e 41 5d 5d c3 cc cc cc cc cc 40 53 55
+0x00007ffb873fe423:   56 41 55 48 81 ec b8 00 00 00 48 8b 05 24 de 8c
+0x00007ffb873fe433:   00 48 33 c4 48 89 84 24 a0 00 00 00 48 8b e9 48
+0x00007ffb873fe443:   c7 c3 ff ff ff ff 0f 1f 80 00 00 00 00 48 ff c3
+0x00007ffb873fe453:   80 3c 0b 00 75 f7 33 f6 c6 44 24 30 01 40 38 35
+0x00007ffb873fe463:   54 10 90 00 74 17 40 38 35 30 76 8f 00 75 0e 33
+0x00007ffb873fe473:   d2 48 8d 0d e5 8c 6d 00 e8 d0 e6 1a 00 45 33 ed
+0x00007ffb873fe483:   85 db 0f 8e 11 02 00 00 48 89 bc 24 e8 00 00 00
+0x00007ffb873fe493:   48 8b fd 48 63 c3 33 db 4c 89 a4 24 f0 00 00 00
+0x00007ffb873fe4a3:   4c 89 b4 24 f8 00 00 00 4c 89 bc 24 b0 00 00 00
+0x00007ffb873fe4b3:   48 89 5c 24 40 48 89 44 24 68 0f 1f 00 0f b6 07
+0x00007ffb873fe4c3:   84 c0 74 12 3c 3b 74 0e 0f b6 44 2b 01 48 ff c3
+0x00007ffb873fe4d3:   ff c6 84 c0 75 ee 48 8d 54 24 38 48 c7 44 24 38
+0x00007ffb873fe4e3:   00 00 00 00 48 8d 4c 24 60 e8 af b0 0f 00 48 8b
+0x00007ffb873fe4f3:   44 24 38 33 d2 4c 8b b0 78 02 00 00 49 8b 46 18
+0x00007ffb873fe503:   4d 8b 66 10 48 89 44 24 50 49 8b 46 20 48 89 44
+0x00007ffb873fe513:   24 58 49 8b 46 28 48 89 44 24 48 8b c6 41 2b c5
+0x00007ffb873fe523:   48 63 f8 48 8d 4f 01 e8 f1 84 4b 00 49 63 d5 4c
+0x00007ffb873fe533:   8b c7 48 03 d5 48 8b c8 4c 8b f8 ff 15 04 13 62
+0x00007ffb873fe543:   00 48 8b cb 48 2b 4c 24 40 80 7c 24 30 00 42 c6 
+
+
+
+---------------  P R O C E S S  ---------------
+
+Threads class SMR info:
+_java_thread_list=0x000001e5672b01b0, length=0, elements={
+}
+
+Java Threads: ( => current thread )
+
+Other Threads:
+
+=>0x000001e569351800 (exited) JavaThread "Unknown thread" [_thread_in_vm, id=18836, stack(0x0000002088f00000,0x0000002089000000)]
+
+Threads with active compile tasks:
+
+VM state:not at safepoint (not fully initialized)
+
+VM Mutex/Monitor currently owned by a thread: None
+
+
+[error occurred during error reporting (printing compressed oops mode), id 0xc0000005, EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00007ffb879c4b97]
+
+Deoptimization events (0 events):
+No events
+
+Classes redefined (0 events):
+No events
+
+Internal exceptions (0 events):
+No events
+
+Events (1 events):
+Event: 0.023 Loaded shared library C:\Users\wcm\.jdks\corretto-11.0.25\bin\zip.dll
+
+
+Dynamic libraries:
+0x00007ff68a2c0000 - 0x00007ff68a2ce000 	C:\Users\wcm\.jdks\corretto-11.0.25\bin\java.exe
+0x00007ffc1e190000 - 0x00007ffc1e388000 	C:\WINDOWS\SYSTEM32\ntdll.dll
+0x00007ffc1df70000 - 0x00007ffc1e032000 	C:\WINDOWS\System32\KERNEL32.DLL
+0x00007ffc1bcd0000 - 0x00007ffc1bfc6000 	C:\WINDOWS\System32\KERNELBASE.dll
+0x00007ffc1b8d0000 - 0x00007ffc1b9d0000 	C:\WINDOWS\System32\ucrtbase.dll
+0x00007ffc142f0000 - 0x00007ffc1430b000 	C:\Users\wcm\.jdks\corretto-11.0.25\bin\VCRUNTIME140.dll
+0x00007ffc06d10000 - 0x00007ffc06d27000 	C:\Users\wcm\.jdks\corretto-11.0.25\bin\jli.dll
+0x00007ffc1d630000 - 0x00007ffc1d7d1000 	C:\WINDOWS\System32\USER32.dll
+0x00007ffc1b850000 - 0x00007ffc1b872000 	C:\WINDOWS\System32\win32u.dll
+0x00007ffc1abc0000 - 0x00007ffc1ae5b000 	C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.19041.6456_none_60b8a6cb71f64256\COMCTL32.dll
+0x00007ffc1c280000 - 0x00007ffc1c2ab000 	C:\WINDOWS\System32\GDI32.dll
+0x00007ffc1d300000 - 0x00007ffc1d39e000 	C:\WINDOWS\System32\msvcrt.dll
+0x00007ffc1b9d0000 - 0x00007ffc1bae9000 	C:\WINDOWS\System32\gdi32full.dll
+0x00007ffc1c060000 - 0x00007ffc1c0fd000 	C:\WINDOWS\System32\msvcp_win.dll
+0x00007ffc1d080000 - 0x00007ffc1d0af000 	C:\WINDOWS\System32\IMM32.DLL
+0x00007ffc14570000 - 0x00007ffc1457c000 	C:\Users\wcm\.jdks\corretto-11.0.25\bin\vcruntime140_1.dll
+0x00007ffbf3820000 - 0x00007ffbf38ad000 	C:\Users\wcm\.jdks\corretto-11.0.25\bin\msvcp140.dll
+0x00007ffb87210000 - 0x00007ffb87dd5000 	C:\Users\wcm\.jdks\corretto-11.0.25\bin\server\jvm.dll
+0x00007ffc1c2b0000 - 0x00007ffc1c361000 	C:\WINDOWS\System32\ADVAPI32.dll
+0x00007ffc1c680000 - 0x00007ffc1c71f000 	C:\WINDOWS\System32\sechost.dll
+0x00007ffc1c500000 - 0x00007ffc1c620000 	C:\WINDOWS\System32\RPCRT4.dll
+0x00007ffc1b820000 - 0x00007ffc1b847000 	C:\WINDOWS\System32\bcrypt.dll
+0x00007ffc1d3a0000 - 0x00007ffc1d40b000 	C:\WINDOWS\System32\WS2_32.dll
+0x00007ffc1c720000 - 0x00007ffc1c728000 	C:\WINDOWS\System32\PSAPI.DLL
+0x00007ffc17780000 - 0x00007ffc1778a000 	C:\WINDOWS\SYSTEM32\VERSION.dll
+0x00007ffc08170000 - 0x00007ffc08197000 	C:\WINDOWS\SYSTEM32\WINMM.dll
+0x00007ffc19300000 - 0x00007ffc19312000 	C:\WINDOWS\SYSTEM32\kernel.appcore.dll
+0x00007ffc06fc0000 - 0x00007ffc06fd0000 	C:\Users\wcm\.jdks\corretto-11.0.25\bin\verify.dll
+0x00007ffc1b200000 - 0x00007ffc1b401000 	C:\WINDOWS\SYSTEM32\DBGHELP.DLL
+0x00007ffc1b140000 - 0x00007ffc1b174000 	C:\WINDOWS\SYSTEM32\dbgcore.DLL
+0x00007ffc1bfd0000 - 0x00007ffc1c052000 	C:\WINDOWS\System32\bcryptPrimitives.dll
+0x00007ffbfd520000 - 0x00007ffbfd548000 	C:\Users\wcm\.jdks\corretto-11.0.25\bin\java.dll
+0x00007ffc06f00000 - 0x00007ffc06f0a000 	C:\Users\wcm\.jdks\corretto-11.0.25\bin\jimage.dll
+0x00007ffbfdef0000 - 0x00007ffbfdf08000 	C:\Users\wcm\.jdks\corretto-11.0.25\bin\zip.dll
+
+dbghelp: loaded successfully - version: 4.0.5 - missing functions: none
+symbol engine: initialized successfully - sym options: 0x614 - pdb path: .;C:\Users\wcm\.jdks\corretto-11.0.25\bin;C:\WINDOWS\SYSTEM32;C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.19041.6456_none_60b8a6cb71f64256;C:\Users\wcm\.jdks\corretto-11.0.25\bin\server
+
+VM Arguments:
+java_command: <unknown>
+java_class_path (initial): <not set>
+Launcher Type: SUN_STANDARD
+
+[Global flags]
+     uint G1ConcRefinementThreads                  = 4                                         {product} {ergonomic}
+    uintx GCDrainStackTargetSize                   = 64                                        {product} {ergonomic}
+   size_t InitialHeapSize                          = 266555008                                 {product} {ergonomic}
+   size_t MaxHeapSize                              = 4264880128                                {product} {ergonomic}
+    uintx ReservedCodeCacheSize                    = 251658240                              {pd product} {ergonomic}
+     bool SegmentedCodeCache                       = true                                      {product} {ergonomic}
+     bool UseCompressedClassPointers               = true                                 {lp64_product} {ergonomic}
+     bool UseCompressedOops                        = true                                 {lp64_product} {ergonomic}
+     bool UseG1GC                                  = true                                      {product} {ergonomic}
+     bool UseLargePagesIndividualAllocation        = false                                  {pd product} {ergonomic}
+
+Logging:
+Log output configuration:
+ #0: stdout all=warning uptime,level,tags
+ #1: stderr all=off uptime,level,tags
+
+Environment Variables:
+JAVA_HOME=C:\Users\wcm\.jdks\corretto-11.0.25
+PATH=C:\Users\wcm\bin;D:\develop\Git\mingw64\bin;D:\develop\Git\usr\local\bin;D:\develop\Git\usr\bin;D:\develop\Git\usr\bin;D:\develop\Git\mingw64\bin;D:\develop\Git\usr\bin;C:\Users\wcm\bin;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0;C:\WINDOWS\System32\OpenSSH;D:\develop\Git\cmd;D:\develop\Git\usr\bin;D:\develop\TortoiseSVN\bin;D:\develop\iperf;D:\develop\DevEcoStudio\Sdk\OpenHarmony\10\toolchains;D:\develop\DevEcoStudio\ohpm\1_2_5\bin;D:\develop\dart\bin;D:\develop\flutter\pub\cache\bin;D:\develop\AndroidStudio\Sdk\platform-tools;D:\develop\Pandoc;%NVM_HOME%;%NVM_SYMLINK%;C:\Users\wcm\.local\bin;D:\develop\Python\Scripts;D:\develop\Python;C:\Users\wcm\AppData\Local\Microsoft\WindowsApps;D:\develop\VSCode\VSCode\bin;D:\develop\DevEcoStudio5\DevEcoStudio5\bin;D:\develop\nvm;C:\nvm4w\nodejs;D:\develop\ZCode\resources\tools\ripgrep;D:\develop\ZCode\resources\tools\ugrep;D:\develop\Git\usr\bin\vendor_perl;D:\develop\Git\usr\bin\core_perl
+USERNAME=wcm
+SHELL=D:\develop\Git\bin\bash.exe
+LANG=C.UTF-8
+LC_CTYPE=C.UTF-8
+TERM=xterm-256color
+OS=Windows_NT
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel
+TMP=C:\Users\wcm\AppData\Local\Temp
+TEMP=C:\Users\wcm\AppData\Local\Temp
+
+
+
+---------------  S Y S T E M  ---------------
+
+OS: Windows 10 , 64 bit Build 19041 (10.0.19041.5915)
+OS uptime: 30 days 6:50 hours
+
+CPU:total 4 (initial active 4) 
+
+Memory: 4k page, system-wide physical 16269M (3342M free)
+TotalPageFile size 28072M (AvailPageFile size 8528M)
+current process WorkingSet (physical memory assigned to process): 8M, peak: 8M
+current process commit charge ("private bytes"): 3M, peak: 3M
+
+vm_info: OpenJDK 64-Bit Server VM (11.0.25+9-LTS) for windows-amd64 JRE (11.0.25+9-LTS), built on Oct 10 2024 00:01:59 by "Administrator" with MS VC++ 16.10 / 16.11 (VS2019)
+
+END.

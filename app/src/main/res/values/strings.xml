@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PM Guide</string>
+
+    <string name="handbook_title">PM Guide</string>
+    <string name="handbook_subtitle">API 使用手册</string>
+    <string name="handbook_kicker">API HANDBOOK</string>
+    <string name="handbook_hero_title">锚点引导，一套 API 全搞定</string>
+    <string name="handbook_hero_subtitle">锚点跟随、自动选边、挖洞与入场动画、气泡样式、局部遮罩和触摸穿透。先播放一次完整三步引导，再往下逐个卡片体验单项能力。</string>
+    <string name="handbook_chip_dialog">DialogFragment</string>
+    <string name="handbook_chip_hole">挖洞动画</string>
+    <string name="handbook_chip_pass">触摸穿透</string>
+    <string name="handbook_hero_action">播放完整引导</string>
+    <string name="handbook_reset">重置引导状态</string>
+
+    <string name="demo_counter_value">点击计数：%1$d</string>
+    <string name="demo_counter_start">点击计数：0 · 点我开始</string>
+
+    <string name="custom_guide_badge">自定义布局</string>
+    <string name="custom_guide_title">GuideContent.Custom</string>
+    <string name="custom_guide_message">气泡内容完全由你的 XML 决定，按钮交互直接调用 GuideSession。</string>
+    <string name="custom_guide_previous">上一步</string>
+    <string name="custom_guide_next">下一步</string>
+
+    <string name="hb_code_step">GuideDialogFragment.builder(this)\n    .addStep(anchorA, content, GuidePlacement(side = Side.BOTTOM))\n    .addStep(anchorB, content, GuidePlacement(side = Side.TOP))\n    .addStep(anchorC, content, GuidePlacement(side = Side.BOTTOM))\n    .listener(guideListener)\n    .show(supportFragmentManager)</string>
+    <string name="hb_code_placement">GuidePlacement(\n    side = Side.TOP,          // TOP/BOTTOM/START/END/AUTO\n    align = Alignment.CENTER,\n    offsetX = 0.dp,\n    offsetY = 0.dp\n)</string>
+    <string name="hb_code_mask">GuideHighlight(\n    maskColor = 0xCC1565C0.toInt(),\n    holeOverlayColor = 0x33FFFFFF.toInt(),\n    shape = HoleShape.RoundRect(12.dp)\n)</string>
+    <string name="hb_code_bubble">GuideTooltip(\n    content = GuideContent.Default(\n        title = \"自定义气泡\",\n        message = \"...\",\n        titleColor = 0xFF4E342E.toInt(),\n        messageColor = 0xFF6D4C41.toInt()\n    ),\n    backgroundColor = 0xFFFFF8E1.toInt(),\n    cornerRadius = 22.dp,\n    strokeColor = 0xFFFFB300.toInt(),\n    strokeWidth = 2.dp\n)</string>
+    <string name="hb_code_shape">GuideHighlight(\n    shape = HoleShape.Circle(),   // Rect / RoundRect / Oval / Custom\n    padding = 12.dp\n)</string>
+    <string name="hb_code_size">GuideHighlight(\n    holeRectProvider = { anchor ->\n        // anchor 是屏幕坐标，返回值使用同一坐标系\n        Rect(\n            anchor.centerX() - halfWidthPx,\n            anchor.centerY() - halfHeightPx,\n            anchor.centerX() + halfWidthPx,\n            anchor.centerY() + halfHeightPx\n        )\n    }\n)</string>
+    <string name="hb_code_animation">GuideHighlight(\n    shape = HoleShape.RoundRect(14.dp),\n    holeAnimation = HoleAnimation.Scale(\n        duration = 420L,\n        startScale = 0.2f,\n        fadeScrim = true\n    )\n)</string>
+    <string name="hb_code_pass">GuideStep(\n    anchor = GuideAnchor.ViewAnchor(counterButton),\n    highlight = GuideHighlight(shape = HoleShape.RoundRect(12.dp)),\n    passThroughTargetTouch = true    // 洞内点击作用于底部控件\n)</string>
+    <string name="hb_code_local_mask">GuideHighlight(\n    maskRectProvider = { container, anchor ->\n        Rect(anchor).apply { inset(-padX, -padY) }\n    }\n)\nGuideStep(\n    ...,\n    passThroughOutsideMask = true\n)</string>
+    <string name="hb_code_custom_content">GuideContent.CustomBinding(\n    create = { inflater, parent ->\n        ViewGuideCustomDemoBinding.inflate(inflater, parent, false)\n    },\n    bind = { binding, session ->\n        binding.customGuideNext.setOnClickListener { session.next() }\n    }\n)</string>
+    <string name="hb_code_custom_position">GuidePlacement(\n    customPosition = { _, size, available ->\n        val left = available.centerX() - size.width / 2\n        val top = available.bottom - size.height - marginPx\n        Rect(left, top, left + size.width, top + size.height)\n    }\n)</string>
+    <string name="hb_code_rect_anchor">GuideStep(\n    anchor = GuideAnchor.RectAnchor { fixedScreenRect },\n    followAnchor = false\n)</string>
+    <string name="hb_code_show_once">GuideDialogFragment.builder(this)\n    .addStep(...)\n    .storage(demoStorage)\n    .showOnce(\"welcome_v1\")\n    .show(supportFragmentManager)</string>
+    <string name="hb_code_recycler">GuideStep(\n    anchor = GuideAnchor.RecyclerViewItemAnchor(\n        recyclerView = binding.itemRecycler,\n        position = 2,\n        childId = R.id.itemAction\n    )\n)</string>
+</resources>

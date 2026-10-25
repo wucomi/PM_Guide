@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        引导 Dialog 的基础主题。默认 Material3；
+        宿主 App 可以在自己的资源里重新定义同名 style 来继承 App 主题：
+        <style name="Theme.Guide.Base" parent="Theme.MyApp" />
+    -->
+    <style name="Theme.Guide.Base" parent="Theme.Material3.DayNight.NoActionBar" />
+
+    <!-- 引导 Dialog：全屏透明宿主，遮罩由 GuideOverlayView 自己绘制 -->
+    <style name="Theme.Guide.Dialog" parent="Theme.Guide.Base">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+
+    <style name="TextAppearance.Guide.Title" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.Guide.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="TextAppearance.Guide.Indicator" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+</resources>
