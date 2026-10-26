@@ -30,7 +30,7 @@ data class GuideHighlight(
 
     /**
      * 锚点矩形向外扩展的距离，避免高亮圈紧贴控件边缘。
-     * 该值同时参与 [GuidePlacement.margin] 的起算位置。
+     * 该值同时参与 [GuidePosition.Relative.margin] 的起算位置。
      *
      * 使用 [holeRectProvider] 时，[padding] 不再生效，由回调自行决定外扩距离。
      */
@@ -60,7 +60,7 @@ data class GuideHighlight(
      *
      * 回调参数是锚点当前的**可见屏幕矩形**，返回值同样要求是**屏幕坐标**。
      * 返回值可以比锚点大、小、偏移，甚至与锚点无关。
-     * 返回的矩形同时作为气泡定位的基准（[GuidePlacement.margin] 从它起算）。
+     * 返回的矩形同时作为气泡定位的基准（[GuidePosition.Relative.margin] 从它起算）。
      *
      * 为 `null` 时使用“锚点矩形 + [padding]”。
      *

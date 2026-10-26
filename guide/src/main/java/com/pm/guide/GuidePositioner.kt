@@ -10,10 +10,10 @@ import kotlin.math.abs
  *
  * ## 职责
  * - 只做几何计算，不访问 View/Context，不修改任何 UI；
- * - 实现 [GuidePlacement] 的选边、对齐、偏移和溢出处理。
+ * - 实现 [GuidePosition] 的相对定位和自定义定位。
  *
  * ## 可复用性
- * - 调用方可以单测自己的 [GuidePlacement] 配置；
+ * - 调用方可以单测自己的 [GuideTooltip.position] 配置；
  * - 自定义气泡实现可以直接复用，而不是重写一套坐标逻辑。
  *
  * ## 坐标
@@ -26,10 +26,10 @@ object GuidePositioner {
      * 定位输出。
      *
      * ## 保证
-     * [tooltipRect] 已按 [GuidePlacement.overflow] 校正；
+     * [tooltipRect] 已按 [GuideTooltip.overflow] 校正；
      * [resolvedSide] 一定不是 [Side.AUTO]。
      *
-     * @param tooltipRect 气泡最终矩形，已按 [GuidePlacement.overflow] 校正。
+     * @param tooltipRect 气泡最终矩形，已按 [GuideTooltip.overflow] 校正。
      * @param resolvedSide 实际生效的方向；请求 [Side.AUTO] 时据此获知最终选了哪一侧。
      */
     data class Result(
@@ -47,14 +47,16 @@ object GuidePositioner {
      *
      * ## 线程
      * 纯函数，可在任意线程调用；相同输入得到相同输出。
-     * 使用 [GuidePlacement.customPosition] 时，纯度由调用方提供的回调决定。
+     * 使用 [GuidePosition.Custom] 时，纯度由调用方提供的回调决定。
      *
      * @param anchorRect 锚点可见矩形。
      * @param highlightRect 高亮/挖洞基准矩形，决定气泡间距的起算位置。
      * @param tooltipWidth 气泡测量后的宽度。
      * @param tooltipHeight 气泡测量后的高度。
      * @param availableRect 气泡允许占用的区域，已扣除系统栏和键盘。
-     * @param placement 相对锚点的摆放规则。
+     * @param position 相对位置或完全自定义位置。
+     * @param overflow 空间不足时的降级策略。
+     * @param edgePadding 气泡距可用区域边缘的最小留白。
      * @param density 当前屏幕密度。
      * @param layoutDirection 布局方向，用于解析 START/END。
      */
@@ -64,46 +66,73 @@ object GuidePositioner {
         tooltipWidth: Int,
         tooltipHeight: Int,
         availableRect: Rect,
-        placement: GuidePlacement,
+        position: GuidePosition,
+        overflow: Overflow,
+        edgePadding: Dp,
         density: Float,
         layoutDirection: Int = View.LAYOUT_DIRECTION_LTR
     ): Result {
-        val margin = placement.margin.px(density)
-        val edge = placement.edgePadding.px(density)
-        val offsetX = placement.offsetX.px(density)
-        val offsetY = placement.offsetY.px(density)
+        val edge = edgePadding.px(density)
         val rtl = layoutDirection == View.LAYOUT_DIRECTION_RTL
         val width = tooltipWidth.coerceAtLeast(0)
         val height = tooltipHeight.coerceAtLeast(0)
-
         val available = Rect(availableRect)
         val highlight = Rect(highlightRect)
 
-        // 完全自定义布局：跳过选边/对齐/偏移，只按 overflow 决定是否夹回可用区域。
-        placement.customPosition?.let { provider ->
-            val tooltipSize = Size(width, height)
-            val custom = Rect(provider(Rect(anchorRect), tooltipSize, available))
-            val finalRect = when (placement.overflow) {
-                Overflow.CLAMP, Overflow.FLIP_THEN_CLAMP ->
-                    clampToAvailable(custom, available, edge)
+        return when (position) {
+            is GuidePosition.Custom -> {
+                val tooltipSize = Size(width, height)
+                val custom = Rect(position.provider(Rect(anchorRect), tooltipSize, available))
+                val finalRect = when (overflow) {
+                    Overflow.CLAMP, Overflow.FLIP_THEN_CLAMP ->
+                        clampToAvailable(custom, available, edge)
 
-                Overflow.FLIP, Overflow.NONE -> custom
+                    Overflow.FLIP, Overflow.NONE -> custom
+                }
+                Result(
+                    tooltipRect = finalRect,
+                    resolvedSide = inferSide(finalRect, highlight, rtl)
+                )
             }
-            val customSide = inferSide(finalRect, highlight, rtl)
-            return Result(
-                tooltipRect = finalRect,
-                resolvedSide = customSide
+
+            is GuidePosition.Relative -> placeRelative(
+                position = position,
+                highlight = highlight,
+                available = available,
+                width = width,
+                height = height,
+                edge = edge,
+                overflow = overflow,
+                density = density,
+                rtl = rtl
             )
         }
+    }
+
+    /** 计算相对位置模式：选边、对齐、偏移和溢出处理。 */
+    private fun placeRelative(
+        position: GuidePosition.Relative,
+        highlight: Rect,
+        available: Rect,
+        width: Int,
+        height: Int,
+        edge: Int,
+        overflow: Overflow,
+        density: Float,
+        rtl: Boolean
+    ): Result {
+        val margin = position.margin.px(density)
+        val offsetX = position.offsetX.px(density)
+        val offsetY = position.offsetY.px(density)
 
         val candidates: List<Side> =
-            if (placement.side == Side.AUTO) {
-                placement.autoOrder
+            if (position.side == Side.AUTO) {
+                position.autoOrder
                     .filter { it != Side.AUTO }
                     .distinct()
                     .ifEmpty { listOf(Side.BOTTOM, Side.TOP, Side.END, Side.START) }
             } else {
-                listOf(placement.side)
+                listOf(position.side)
             }
 
         fun raw(side: Side): Rect = rawRect(
@@ -114,7 +143,7 @@ object GuidePositioner {
             margin = margin,
             offsetX = offsetX,
             offsetY = offsetY,
-            align = placement.align,
+            align = position.align,
             rtl = rtl
         )
 
@@ -124,19 +153,43 @@ object GuidePositioner {
                     rect.right <= available.right - edge &&
                     rect.bottom <= available.bottom - edge
 
+        /**
+         * 只检查翻边方向所在轴的空间。
+         *
+         * 横向放不下不应该阻止纵向翻边，反之亦然；另一轴交给
+         * [clampToAvailable] 平移处理。
+         */
+        fun fitsAlongSide(side: Side): Boolean {
+            if (side == Side.AUTO) return false
+            val rect = raw(side)
+            return when (side) {
+                Side.TOP, Side.BOTTOM ->
+                    rect.top >= available.top + edge && rect.bottom <= available.bottom - edge
+
+                Side.START, Side.END ->
+                    rect.left >= available.left + edge && rect.right <= available.right - edge
+
+                Side.AUTO -> false
+            }
+        }
+
         val resolvedSide: Side =
-            if (placement.side == Side.AUTO) {
+            if (position.side == Side.AUTO) {
                 candidates.firstOrNull { fits(raw(it)) }
+                    ?: candidates.firstOrNull { fitsAlongSide(it) }
                     ?: candidates.maxByOrNull {
                         freeSpace(it, highlight, available, margin, rtl)
                     }
                     ?: Side.BOTTOM
             } else {
-                val preferred = placement.side
+                val preferred = position.side
                 val opposite = preferred.opposite()
-                when (placement.overflow) {
+                when (overflow) {
                     Overflow.FLIP, Overflow.FLIP_THEN_CLAMP ->
-                        if (!fits(raw(preferred)) && opposite != null && fits(raw(opposite))) {
+                        if (!fitsAlongSide(preferred) &&
+                            opposite != null &&
+                            fitsAlongSide(opposite)
+                        ) {
                             opposite
                         } else {
                             preferred
@@ -147,9 +200,7 @@ object GuidePositioner {
             }
 
         var tooltipRect = raw(resolvedSide)
-        if (placement.overflow == Overflow.CLAMP ||
-            placement.overflow == Overflow.FLIP_THEN_CLAMP
-        ) {
+        if (overflow == Overflow.CLAMP || overflow == Overflow.FLIP_THEN_CLAMP) {
             tooltipRect = clampToAvailable(tooltipRect, available, edge)
         }
 

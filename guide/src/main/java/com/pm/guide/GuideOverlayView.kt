@@ -20,6 +20,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
@@ -65,6 +66,18 @@ internal class GuideOverlayView @JvmOverloads constructor(
 
     /** 气泡容器；内容由 [buildTooltip] 挂载，位置由 [onLayout] 手动摆放。 */
     private val bubble = FrameLayout(context)
+
+    /** 自定义布局里的气泡卡片（`@id/guide_bubble`）；定位和 overflow 以它为准。 */
+    private var customBubbleView: View? = null
+
+    /** 自定义箭头 View（`@id/guide_arrow`）；最终位置由 [positionCustomArrow] 计算。 */
+    private var customArrowView: View? = null
+
+    /** 计算自定义气泡卡片相对气泡容器位置时复用的矩形。 */
+    private val customBubbleRect = Rect()
+
+    /** 计算自定义箭头相对气泡容器位置时复用的矩形。 */
+    private val customArrowRect = Rect()
 
     /** 遮罩画笔；每帧只更新颜色。 */
     private val scrimPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -169,6 +182,9 @@ internal class GuideOverlayView @JvmOverloads constructor(
 
     /** 非气泡区域按下时的起点，用于判断是否为一次点击。 */
     private var downPoint: PointF? = null
+
+    /** 当前手势是否从挖孔内开始（用于“点击洞进入下一步”）。 */
+    private var touchStartedInHole = false
 
     /** 当前手势是否从气泡内部开始（用于把事件交给子 View）。 */
     private var touchStartedInTooltip = false
@@ -310,6 +326,8 @@ internal class GuideOverlayView @JvmOverloads constructor(
      * 这三者由调用方决定生命周期。
      */
     private fun resetTransientState() {
+        customBubbleView = null
+        customArrowView = null
         holeAnimator?.cancel()
         holeAnimator = null
         bubble.animate().cancel()
@@ -329,6 +347,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
         maskRect.setEmpty()
         arrowTip = null
         downPoint = null
+        touchStartedInHole = false
         touchStartedInTooltip = false
         passThroughActive = false
         lastLocatedAnchor = null
@@ -336,8 +355,19 @@ internal class GuideOverlayView @JvmOverloads constructor(
         lastLocatedTooltip = null
     }
 
-    /** 根据 GuideTooltip 配置应用气泡背景、圆角和描边。 */
+    /** 应用气泡样式；自定义内容默认保持透明，由布局自己绘制背景。 */
     private fun applyBubbleStyle(tooltip: GuideTooltip) {
+        val custom = tooltip.content is GuideContent.Custom ||
+            tooltip.content is GuideContent.CustomBinding<*>
+
+        // 自定义内容默认不画库气泡背景，由布局自己实现卡片/描边/箭头。
+        if (custom && tooltip.backgroundColor == null) {
+            bubbleFillColor = surfaceBubbleColor
+            bubble.background = null
+            bubble.elevation = 0f
+            return
+        }
+
         applyBubbleBackground(
             fill = tooltip.backgroundColor ?: surfaceBubbleColor,
             stroke = tooltip.strokeColor ?: surfaceBubbleStrokeColor,
@@ -354,6 +384,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
         strokeWidthPx: Int
     ) {
         bubbleFillColor = fill
+        bubble.elevation = 8.dp.px(density).toFloat()
         bubble.background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radiusPx
@@ -390,6 +421,9 @@ internal class GuideOverlayView @JvmOverloads constructor(
 
             is GuideContent.CustomBinding<*> -> buildBoundContent(content, session)
         }
+        customBubbleView = contentView.findViewById(R.id.guide_bubble)
+        customArrowView = contentView.findViewById(R.id.guide_arrow)
+        (contentView as? ViewGroup)?.clipChildren = false
         bubble.addView(
             contentView,
             LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
@@ -542,7 +576,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
     /**
      * 取出锚点用于挂 attach 监听的 View。
      *
-     * View/Id/RecyclerView 锚点都有稳定的宿主 View；RectAnchor 没有，
+     * View/RecyclerView 锚点都有稳定的宿主 View；RectAnchor 没有，
      * 只依赖窗口的 pre-draw。
      */
     private fun anchorViewOf(anchor: GuideAnchor): View? = when (anchor) {
@@ -626,7 +660,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
     }
 
     /**
-     * 测量 Overlay：自身始终占满窗口，只负责按 maxWidth 约束气泡宽度。
+     * 测量 Overlay：自身始终占满窗口，气泡宽度按 maxWidth 约束。
      */
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val widthSize = MeasureSpec.getSize(widthMeasureSpec)
@@ -640,14 +674,35 @@ internal class GuideOverlayView @JvmOverloads constructor(
             return
         }
 
-        val edge = step.tooltip.placement.edgePadding.px(density)
-        val maxWidth = min(
-            step.tooltip.maxWidth.px(density),
-            (widthSize - edge * 2).coerceAtLeast(0)
-        ).coerceAtLeast(1)
+        val edge = step.tooltip.edgePadding.px(density)
+        computeAvailableRect(widthSize, heightSize, availableRect)
+        val availableWidth = availableRect.width()
+
+        val widthSpec = step.tooltip.maxWidth
+        val (maxWidth, widthModeSpec) = when (widthSpec) {
+            is GuideWidth.Fixed -> {
+                val fixed = min(
+                    widthSpec.max.px(density),
+                    (availableWidth - edge * 2).coerceAtLeast(0)
+                )
+                fixed.coerceAtLeast(1) to MeasureSpec.AT_MOST
+            }
+
+            GuideWidth.FillScreen -> {
+                (availableWidth - edge * 2).coerceAtLeast(1) to MeasureSpec.EXACTLY
+            }
+
+            GuideWidth.FillMask -> {
+                val maskWidth = maskWidthForMeasure(step, widthSize, heightSize)
+                    .takeIf { it > 0 }
+                    ?: availableWidth
+                (min(maskWidth, availableWidth) - edge * 2).coerceAtLeast(1) to
+                    MeasureSpec.EXACTLY
+            }
+        }
 
         bubble.measure(
-            MeasureSpec.makeMeasureSpec(maxWidth, MeasureSpec.AT_MOST),
+            MeasureSpec.makeMeasureSpec(maxWidth, widthModeSpec),
             MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
         )
 
@@ -656,6 +711,20 @@ internal class GuideOverlayView @JvmOverloads constructor(
         val measuredHeight =
             if (heightMode == MeasureSpec.UNSPECIFIED) bubble.measuredHeight else heightSize
         setMeasuredDimension(measuredWidth, measuredHeight)
+    }
+
+    /**
+     * onMeasure 阶段获取遮罩宽度。
+     *
+     * 直接复用 [resolveMaskRect]，保证测量和绘制使用同一套裁剪逻辑。
+     * 没有 provider 或锚点尚未解析时返回窗口宽度。
+     */
+    private fun maskWidthForMeasure(step: GuideStep, width: Int, height: Int): Int {
+        if (step.highlight.maskRectProvider == null) return width
+        val anchor = anchorScreenRect ?: return width
+        getLocationOnScreen(originLocation)
+        resolveMaskRect(step, width, height, originLocation, anchor)
+        return if (maskRect.isEmpty) width else maskRect.width().roundToInt()
     }
 
     /**
@@ -692,24 +761,60 @@ internal class GuideOverlayView @JvmOverloads constructor(
         resolveHighlightRect(step, screenAnchor, localAnchorRect, originLocation, highlightRect)
         computeAvailableRect(width, height, availableRect)
 
+        val customBubble = customBubbleView
+        val tooltipWidth = customBubble?.measuredWidth ?: bubbleWidth
+        val tooltipHeight = customBubble?.measuredHeight ?: bubbleHeight
+        if (tooltipWidth <= 0 || tooltipHeight <= 0) {
+            layoutFallback(width, height, bubbleWidth, bubbleHeight)
+            return
+        }
+
         val result = GuidePositioner.place(
             anchorRect = localAnchorRect,
             highlightRect = highlightRect,
-            tooltipWidth = bubbleWidth,
-            tooltipHeight = bubbleHeight,
+            tooltipWidth = tooltipWidth,
+            tooltipHeight = tooltipHeight,
             availableRect = availableRect,
-            placement = step.tooltip.placement,
+            position = effectivePosition(step.tooltip),
+            overflow = step.tooltip.overflow,
+            edgePadding = step.tooltip.edgePadding,
             density = density,
             layoutDirection = layoutDirection
         )
 
         val rect = result.tooltipRect
-        bubble.layout(rect.left, rect.top, rect.right, rect.bottom)
+        // 先按气泡容器的实际测量尺寸摆放，保证自定义布局里的箭头/卡片能被完整布局。
+        bubble.layout(
+            rect.left,
+            rect.top,
+            rect.left + bubbleWidth,
+            rect.top + bubbleHeight
+        )
+        if (customBubble != null) {
+            // GuidePositioner 定位的是 guide_bubble 卡片；再根据卡片在根布局里的偏移
+            // 把整个自定义内容移到位，箭头也会跟着移动。
+            customBubbleRect.set(0, 0, customBubble.width, customBubble.height)
+            bubble.offsetDescendantRectToMyCoords(customBubble, customBubbleRect)
+            val dx = rect.left - (bubble.left + customBubbleRect.left)
+            val dy = rect.top - (bubble.top + customBubbleRect.top)
+            bubble.layout(
+                bubble.left + dx,
+                bubble.top + dy,
+                bubble.right + dx,
+                bubble.bottom + dy
+            )
+        }
         tooltipRect.set(rect)
         resolvedSide = result.resolvedSide
 
         updateHole(step, highlightRect, width, height)
-        arrowTip = computeArrowTip(step.tooltip.arrow, tooltipRect, highlightRect)
+
+        arrowTip = if (customArrowView != null) {
+            null
+        } else {
+            computeArrowTip(step.tooltip.arrow, tooltipRect, highlightRect)
+        }
+        positionCustomArrow(step.tooltip.arrow, tooltipRect, highlightRect)
         reveal()
         notifyLocated(step, screenAnchor, originLocation)
     }
@@ -737,6 +842,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
         animatedHoleRect.setEmpty()
         maskRect.set(0f, 0f, width.toFloat(), height.toFloat())
         arrowTip = null
+        customArrowView?.visibility = INVISIBLE
         if (fallbackAllowed) {
             reveal()
         }
@@ -972,7 +1078,10 @@ internal class GuideOverlayView @JvmOverloads constructor(
         if (step != null && (positioned || fallbackAllowed)) {
             drawScrim(canvas, step)
             drawHoleOverlay(canvas, step)
-            drawArrow(canvas, step)
+            // 自定义箭头由库定位，不再画默认 Canvas 箭头。
+            if (customArrowView == null) {
+                drawArrow(canvas, step)
+            }
         }
         super.dispatchDraw(canvas)
     }
@@ -1083,7 +1192,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
      * 计算箭头尖端。
      *
      * 箭头是气泡的视觉元素，不参与 [GuidePositioner] 的纯定位计算；
-     * 锚点中心落在气泡内时不绘制箭头。
+     * 挖孔中心落在气泡内时不绘制箭头。
      */
     private fun computeArrowTip(
         arrow: GuideArrow,
@@ -1132,41 +1241,144 @@ internal class GuideOverlayView @JvmOverloads constructor(
         if (max < min) (min + max) / 2f else value.coerceIn(min, max)
 
     /**
+     * 自定义箭头存在时，保证气泡与挖孔之间的间距不小于箭头长度。
+     *
+     * 否则箭头尖端会伸进挖孔区域。用户配置了更大的 margin 时保持用户值；
+     * [GuidePosition.Custom] 由调用方自行决定位置，不做调整。
+     */
+    private fun effectivePosition(tooltip: GuideTooltip): GuidePosition {
+        val arrow = customArrowView ?: return tooltip.position
+        if (!tooltip.arrow.enabled) return tooltip.position
+
+        val position = tooltip.position as? GuidePosition.Relative ?: return tooltip.position
+        val arrowLength = arrow.measuredHeight
+        if (arrowLength <= 0) return position
+
+        return if (position.margin.px(density) < arrowLength) {
+            position.copy(margin = Dp(arrowLength / density))
+        } else {
+            position
+        }
+    }
+
+    /**
+     * 把自定义箭头放到气泡卡片对应的一侧，并沿边缘滑动到挖孔中心附近。
+     *
+     * 箭头资源默认朝上：气泡在挖孔下方时 rotation = 0，在其它方向时旋转。
+     * XML 里的箭头约束只决定它参与布局的初始位置；最终视觉位置由这里覆盖。
+     */
+    private fun positionCustomArrow(
+        arrow: GuideArrow,
+        tooltip: RectF,
+        highlight: Rect
+    ) {
+        val view = customArrowView ?: return
+        if (!arrow.enabled || tooltip.isEmpty || highlight.isEmpty) {
+            view.visibility = INVISIBLE
+            return
+        }
+
+        val holeX = highlight.centerX().toFloat()
+        val holeY = highlight.centerY().toFloat()
+        if (tooltip.contains(holeX, holeY)) {
+            view.visibility = INVISIBLE
+            return
+        }
+
+        val w = view.width.toFloat()
+        val h = view.height.toFloat()
+        if (w <= 0f || h <= 0f) {
+            view.visibility = INVISIBLE
+            return
+        }
+
+        val edge = arrow.edgeInset.px(density).toFloat()
+        val physicalSide = when (resolvedSide) {
+            Side.START -> if (!isRtl) Side.START else Side.END
+            Side.END -> if (!isRtl) Side.END else Side.START
+            else -> resolvedSide
+        }
+
+        val left: Int
+        val top: Int
+        val rotation: Float
+        when (physicalSide) {
+            Side.BOTTOM -> {
+                // 和默认箭头一致：只限制箭头中心距圆角的最小距离。
+                val cx = clamp(holeX, tooltip.left + edge, tooltip.right - edge)
+                left = (cx - w / 2f).roundToInt()
+                top = (tooltip.top - h).roundToInt()
+                rotation = 0f
+            }
+
+            Side.TOP -> {
+                val cx = clamp(holeX, tooltip.left + edge, tooltip.right - edge)
+                left = (cx - w / 2f).roundToInt()
+                top = tooltip.bottom.roundToInt()
+                rotation = 180f
+            }
+
+            Side.START -> {
+                val cy = clamp(holeY, tooltip.top + edge, tooltip.bottom - edge)
+                val cx = tooltip.right + h / 2f
+                left = (cx - w / 2f).roundToInt()
+                top = (cy - h / 2f).roundToInt()
+                rotation = 90f
+            }
+
+            Side.END -> {
+                val cy = clamp(holeY, tooltip.top + edge, tooltip.bottom - edge)
+                val cx = tooltip.left - h / 2f
+                left = (cx - w / 2f).roundToInt()
+                top = (cy - h / 2f).roundToInt()
+                rotation = -90f
+            }
+
+            Side.AUTO -> {
+                view.visibility = INVISIBLE
+                return
+            }
+        }
+
+        // translation 基于箭头的 layout 位置，不用累加，重复布局也稳定。
+        customArrowRect.set(0, 0, view.width, view.height)
+        bubble.offsetDescendantRectToMyCoords(view, customArrowRect)
+        view.translationX = ((left - bubble.left) - customArrowRect.left).toFloat()
+        view.translationY = ((top - bubble.top) - customArrowRect.top).toFloat()
+        view.rotation = rotation
+        view.visibility = VISIBLE
+    }
+
+    /** 默认箭头基点（气泡边缘）的 X 坐标。 */
+    private fun arrowBaseX(tip: PointF): Float = when (resolvedSide) {
+        Side.TOP, Side.BOTTOM -> tip.x
+        Side.START -> if (!isRtl) tooltipRect.right else tooltipRect.left
+        Side.END -> if (!isRtl) tooltipRect.left else tooltipRect.right
+        Side.AUTO -> tip.x
+    }
+
+    /** 默认箭头基点的 Y 坐标。 */
+    private fun arrowBaseY(tip: PointF): Float = when (resolvedSide) {
+        Side.TOP -> tooltipRect.bottom
+        Side.BOTTOM -> tooltipRect.top
+        Side.START, Side.END -> tip.y
+        Side.AUTO -> tip.y
+    }
+
+    /**
      * 从气泡朝向锚点的一侧画三角箭头。
      * [resolvedSide] 表示气泡相对锚点的方位，因此 TOP 时从气泡底边伸出。
      */
     private fun drawArrow(canvas: Canvas, step: GuideStep) {
         val tip = arrowTip ?: return
         if (tooltipRect.isEmpty) return
+        if (resolvedSide == Side.AUTO) return
 
         val size = step.tooltip.arrow.size.px(density).toFloat()
         if (size <= 0f) return
 
-        val baseX: Float
-        val baseY: Float
-        when (resolvedSide) {
-            Side.TOP -> {
-                baseX = tip.x
-                baseY = tooltipRect.bottom
-            }
-
-            Side.BOTTOM -> {
-                baseX = tip.x
-                baseY = tooltipRect.top
-            }
-
-            Side.START -> {
-                baseX = if (!isRtl) tooltipRect.right else tooltipRect.left
-                baseY = tip.y
-            }
-
-            Side.END -> {
-                baseX = if (!isRtl) tooltipRect.left else tooltipRect.right
-                baseY = tip.y
-            }
-
-            Side.AUTO -> return
-        }
+        val baseX = arrowBaseX(tip)
+        val baseY = arrowBaseY(tip)
 
         val dx = tip.x - baseX
         val dy = tip.y - baseY
@@ -1201,20 +1413,25 @@ internal class GuideOverlayView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                val inHole = !holeRect.isEmpty && holeRect.contains(x, y)
+
+                // 洞内操作优先：自定义气泡可能覆盖洞，命中洞时仍应走穿透/下一步。
+                if (step?.passThroughTargetTouch == true && inHole) {
+                    passThroughActive = true
+                    forwardTouchToHost(event)
+                    return true
+                }
+                if (step?.advanceOnTargetClick == true && inHole) {
+                    touchStartedInHole = true
+                    downPoint = PointF(x, y)
+                    return true
+                }
+
                 if (tooltipRect.contains(x, y)) {
                     touchStartedInTooltip = true
                     return super.dispatchTouchEvent(event)
                 }
                 touchStartedInTooltip = false
-
-                if (step?.passThroughTargetTouch == true &&
-                    !holeRect.isEmpty &&
-                    holeRect.contains(x, y)
-                ) {
-                    passThroughActive = true
-                    forwardTouchToHost(event)
-                    return true
-                }
 
                 // 遮罩范围之外（含遮罩为空的情况）不拦截，直接交给宿主页面。
                 if (step?.passThroughOutsideMask == true &&
@@ -1230,6 +1447,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
             }
 
             MotionEvent.ACTION_MOVE -> {
+                if (touchStartedInHole) return true
                 if (touchStartedInTooltip) return super.dispatchTouchEvent(event)
                 if (passThroughActive) {
                     forwardTouchToHost(event)
@@ -1239,6 +1457,15 @@ internal class GuideOverlayView @JvmOverloads constructor(
             }
 
             MotionEvent.ACTION_UP -> {
+                if (touchStartedInHole) {
+                    touchStartedInHole = false
+                    val down = downPoint
+                    downPoint = null
+                    if (down != null && hypot(x - down.x, y - down.y) <= touchSlop) {
+                        session?.next()
+                    }
+                    return true
+                }
                 if (touchStartedInTooltip) {
                     touchStartedInTooltip = false
                     return super.dispatchTouchEvent(event)
@@ -1251,13 +1478,14 @@ internal class GuideOverlayView @JvmOverloads constructor(
                 val down = downPoint
                 downPoint = null
                 if (down != null && hypot(x - down.x, y - down.y) <= touchSlop) {
-                    handleTapOutsideTooltip(x, y)
+                    handleTapOutsideTooltip()
                 }
                 return true
             }
 
             MotionEvent.ACTION_CANCEL -> {
                 val wasInTooltip = touchStartedInTooltip
+                touchStartedInHole = false
                 touchStartedInTooltip = false
                 downPoint = null
                 if (passThroughActive) {
@@ -1308,12 +1536,9 @@ internal class GuideOverlayView @JvmOverloads constructor(
         return null
     }
 
-    /** 点击气泡和洞以外的区域：可按配置前进或关闭引导。 */
-    private fun handleTapOutsideTooltip(x: Float, y: Float) {
-        val step = step ?: return
-        if (step.advanceOnTargetClick && holeRect.contains(x, y)) {
-            session?.next()
-        } else if (dismissOnTouchOutside) {
+    /** 点击气泡和洞以外的区域：按配置关闭引导。 */
+    private fun handleTapOutsideTooltip() {
+        if (dismissOnTouchOutside) {
             session?.dismiss()
         }
     }

@@ -1,79 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:paddingStart="20dp"
-    android:paddingTop="16dp"
-    android:paddingEnd="20dp"
-    android:paddingBottom="8dp">
-
-    <TextView
-        android:id="@+id/custom_guide_badge"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorSecondaryContainer"
-        android:paddingStart="8dp"
-        android:paddingTop="2dp"
-        android:paddingEnd="8dp"
-        android:paddingBottom="2dp"
-        android:text="@string/custom_guide_badge"
-        android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-        android:textColor="?attr/colorOnSecondaryContainer" />
-
-    <TextView
-        android:id="@+id/custom_guide_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:text="@string/custom_guide_title"
-        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-        android:textColor="?attr/colorOnSurface"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/custom_guide_message"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="@string/custom_guide_message"
-        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-        android:textColor="?attr/colorOnSurfaceVariant" />
-
+    android:clipChildren="false">
+    <!-- 气泡卡片：库以这个 View 的尺寸和位置应用 GuidePositioner/overflow -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:id="@id/guide_bubble"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:gravity="end"
-        android:orientation="horizontal">
+        android:background="@drawable/bg_guide_custom_bubble"
+        android:elevation="4dp"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/guide_arrow">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/custom_guide_previous"
-            style="@style/Widget.Material3.Button.TextButton"
+        <TextView
+            android:id="@+id/custom_guide_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minWidth="0dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:text="@string/custom_guide_previous"
-            android:textSize="13sp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp" />
+            android:background="?attr/colorSecondaryContainer"
+            android:paddingStart="8dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="2dp"
+            android:text="@string/custom_guide_badge"
+            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+            android:textColor="?attr/colorOnSecondaryContainer" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/custom_guide_next"
-            style="@style/Widget.Material3.Button"
+        <TextView
+            android:id="@+id/custom_guide_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:minWidth="0dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:text="@string/custom_guide_next"
-            android:textSize="13sp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp" />
+            android:layout_marginTop="10dp"
+            android:text="@string/custom_guide_title"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textColor="?attr/colorOnSurface"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/custom_guide_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/custom_guide_message"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="end"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/custom_guide_previous"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/custom_guide_previous"
+                android:textSize="13sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/custom_guide_next"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="@string/custom_guide_next"
+                android:textSize="13sp" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+
+    <!-- 自定义箭头：XML 位置只作为布局占位；库会按 resolvedSide 把它放到气泡对应侧边并旋转 -->
+    <ImageView
+        android:id="@id/guide_arrow"
+        android:layout_width="30dp"
+        android:layout_height="20dp"
+        android:contentDescription="@null"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_guide_arrow"
+        app:layout_constraintBottom_toTopOf="@id/guide_bubble"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>

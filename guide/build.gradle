@@ -34,4 +34,6 @@ dependencies {
 
     implementation libs.androidx.core.ktx
     implementation libs.androidx.lifecycle.common
+    // 自定义挖孔插槽需要识别 ConstraintLayout 的兄弟约束
+    implementation libs.androidx.constraintlayout
 }

@@ -306,18 +306,22 @@ class GuideDialogFragment : DialogFragment() {
         }
 
         /**
-         * 追加一个使用默认高亮、默认跟随策略的步骤。
+         * 追加一个以 View 为锚点的步骤。
          *
          * `anchor` 直接传 View，避免多 Fragment 同名 id 的冲突。
+         * 需要箭头、气泡样式或穿透选项时，用 [addStep] 传入完整 [GuideStep]。
          */
         fun addStep(
             anchor: View,
             content: GuideContent,
-            placement: GuidePlacement = GuidePlacement()
+            position: GuidePosition = GuidePosition.Relative(),
+            highlight: GuideHighlight = GuideHighlight()
         ): Builder = addStep(
             GuideStep(
                 anchor = GuideAnchor.ViewAnchor(anchor),
-                tooltip = GuideTooltip(content = content, placement = placement)
+                content = content,
+                position = position,
+                highlight = highlight
             )
         )
 

@@ -20,10 +20,11 @@ import com.pm.guide.GuideDialogFragment
 import com.pm.guide.GuideEndReason
 import com.pm.guide.GuideHighlight
 import com.pm.guide.GuideListener
-import com.pm.guide.GuidePlacement
+import com.pm.guide.GuidePosition
 import com.pm.guide.GuideStep
 import com.pm.guide.GuideStorage
 import com.pm.guide.GuideTooltip
+import com.pm.guide.GuideWidth
 import com.pm.guide.HoleAnimation
 import com.pm.guide.HoleShape
 import com.pm.guide.Side
@@ -39,7 +40,7 @@ import kotlin.math.roundToInt
  * - 页面结构、按钮和代码片段全部声明在 `activity_main.xml`。
  *
  * ## 职责
- * - 只负责按钮点击绑定和引导参数配置；
+ * - 负责按钮点击绑定、引导参数配置和 RecyclerView 初始化；
  * - 每张卡片的按钮本身就是锚点，不需要固定的“靶子”区域。
  */
 class MainActivity : AppCompatActivity() {
@@ -198,6 +199,8 @@ class MainActivity : AppCompatActivity() {
         binding.customB.setOnClickListener { showCustomContent(binding.customA, binding.customB) }
 
         binding.customPosition.setOnClickListener { showCustomPosition(it) }
+        binding.fillScreenWidth.setOnClickListener { showFillScreenWidth(it) }
+        binding.fillMaskWidth.setOnClickListener { showFillMaskWidth(it) }
         binding.rectAnchor.setOnClickListener { showRectAnchor(it) }
 
         binding.showOnce.setOnClickListener { showOnceDemo(it) }
@@ -263,11 +266,9 @@ class MainActivity : AppCompatActivity() {
         presentStep(
             configure(
                 GuideStep(
-                    anchor = GuideAnchor.ViewAnchor(anchor),
-                    tooltip = GuideTooltip(
-                        content = doneContent(title, message),
-                        placement = GuidePlacement(side = Side.TOP)
-                    ),
+                    view = anchor,
+                    content = doneContent(title, message),
+                    position = GuidePosition.Relative(side = Side.TOP),
                     highlight = highlight
                 )
             )
@@ -284,7 +285,7 @@ class MainActivity : AppCompatActivity() {
                         title = "标题锚点",
                         message = "气泡会围绕这个标题显示。"
                     ),
-                    GuidePlacement(side = Side.BOTTOM, align = Alignment.CENTER)
+                    GuidePosition.Relative(side = Side.BOTTOM, align = Alignment.CENTER)
                 )
                 .addStep(
                     binding.heroSubtitle,
@@ -292,7 +293,7 @@ class MainActivity : AppCompatActivity() {
                         title = "说明锚点",
                         message = "点击下一步会重新解析锚点并重新定位。"
                     ),
-                    GuidePlacement(side = Side.BOTTOM)
+                    GuidePosition.Relative(side = Side.BOTTOM)
                 )
                 .addStep(
                     binding.heroStart,
@@ -302,7 +303,7 @@ class MainActivity : AppCompatActivity() {
                         primaryLabel = "完成",
                         finishLabel = "完成"
                     ),
-                    GuidePlacement(side = Side.TOP)
+                    GuidePosition.Relative(side = Side.TOP)
                 )
         )
     }
@@ -316,7 +317,7 @@ class MainActivity : AppCompatActivity() {
                     title = "欢迎使用 PM Guide",
                     message = "这是首次进入自动播放的引导，只会出现一次。"
                 ),
-                GuidePlacement(side = Side.BOTTOM)
+                GuidePosition.Relative(side = Side.BOTTOM)
             )
             .addStep(
                 binding.heroSubtitle,
@@ -326,7 +327,7 @@ class MainActivity : AppCompatActivity() {
                     primaryLabel = "完成",
                     finishLabel = "完成"
                 ),
-                GuidePlacement(side = Side.BOTTOM)
+                GuidePosition.Relative(side = Side.BOTTOM)
             )
             .listener(guideListener)
             .storage(demoStorage)
@@ -343,14 +344,12 @@ class MainActivity : AppCompatActivity() {
             newGuide()
                 .addStep(
                     GuideStep(
-                        anchor = GuideAnchor.ViewAnchor(a),
-                        tooltip = GuideTooltip(
-                            content = GuideContent.Default(
-                                title = "第 1 步 · 锚点 A",
-                                message = "点击下一步切换到锚点 B。"
-                            ),
-                            placement = GuidePlacement(side = Side.BOTTOM)
+                        view = a,
+                        content = GuideContent.Default(
+                            title = "第 1 步 · 锚点 A",
+                            message = "点击下一步切换到锚点 B。"
                         ),
+                        position = GuidePosition.Relative(side = Side.BOTTOM),
                         highlight = GuideHighlight(
                             shape = HoleShape.RoundRect(10.dp),
                             padding = 6.dp
@@ -359,14 +358,12 @@ class MainActivity : AppCompatActivity() {
                 )
                 .addStep(
                     GuideStep(
-                        anchor = GuideAnchor.ViewAnchor(b),
-                        tooltip = GuideTooltip(
-                            content = GuideContent.Default(
-                                title = "第 2 步 · 锚点 B",
-                                message = "新锚点会被重新解析，气泡不会停在 alpha = 0。"
-                            ),
-                            placement = GuidePlacement(side = Side.TOP)
+                        view = b,
+                        content = GuideContent.Default(
+                            title = "第 2 步 · 锚点 B",
+                            message = "新锚点会被重新解析，气泡不会停在 alpha = 0。"
                         ),
+                        position = GuidePosition.Relative(side = Side.TOP),
                         highlight = GuideHighlight(
                             shape = HoleShape.RoundRect(10.dp),
                             padding = 6.dp
@@ -375,16 +372,14 @@ class MainActivity : AppCompatActivity() {
                 )
                 .addStep(
                     GuideStep(
-                        anchor = GuideAnchor.ViewAnchor(c),
-                        tooltip = GuideTooltip(
-                            content = GuideContent.Default(
-                                title = "第 3 步 · 锚点 C",
-                                message = "最后一步，主按钮会触发 session.finish()。",
-                                primaryLabel = "完成",
-                                finishLabel = "完成"
-                            ),
-                            placement = GuidePlacement(side = Side.BOTTOM)
+                        view = c,
+                        content = GuideContent.Default(
+                            title = "第 3 步 · 锚点 C",
+                            message = "最后一步，主按钮会触发 session.finish()。",
+                            primaryLabel = "完成",
+                            finishLabel = "完成"
                         ),
+                        position = GuidePosition.Relative(side = Side.BOTTOM),
                         highlight = GuideHighlight(
                             shape = HoleShape.RoundRect(10.dp),
                             padding = 6.dp
@@ -408,13 +403,11 @@ class MainActivity : AppCompatActivity() {
                     position = position,
                     childId = R.id.itemAction
                 ),
-                tooltip = GuideTooltip(
-                    content = doneContent(
-                        "RecyclerView Item ${position + 1}",
-                        "锚点按 adapter position 解析，item 滚动或复用后仍然有效。"
-                    ),
-                    placement = GuidePlacement(side = Side.TOP)
+                content = doneContent(
+                    "RecyclerView Item ${position + 1}",
+                    "锚点按 adapter position 解析，item 滚动或复用后仍然有效。"
                 ),
+                position = GuidePosition.Relative(side = Side.TOP),
                 highlight = GuideHighlight(
                     shape = HoleShape.RoundRect(12.dp),
                     padding = 8.dp
@@ -440,13 +433,13 @@ class MainActivity : AppCompatActivity() {
                 anchor = GuideAnchor.ViewAnchor(anchor),
                 tooltip = GuideTooltip(
                     content = doneContent("Side.$side", sideLabel(side)),
-                    placement = GuidePlacement(
+                    position = GuidePosition.Relative(
                         side = side,
                         align = alignMode,
                         offsetX = offsetX,
                         offsetY = offsetY
                     ),
-                    maxWidth = if (sidePlacement) 130.dp else 220.dp
+                    maxWidth = GuideWidth.Fixed(if (sidePlacement) 130.dp else 220.dp)
                 ),
                 highlight = GuideHighlight(
                     shape = HoleShape.RoundRect(10.dp),
@@ -469,14 +462,12 @@ class MainActivity : AppCompatActivity() {
     private fun showMask(anchor: View, color: Int, label: String) {
         presentStep(
             GuideStep(
-                anchor = GuideAnchor.ViewAnchor(anchor),
-                tooltip = GuideTooltip(
-                    content = doneContent(
-                        "遮罩：$label",
-                        "maskColor = #${Integer.toHexString(color)}"
-                    ),
-                    placement = GuidePlacement(side = Side.BOTTOM)
+                view = anchor,
+                content = doneContent(
+                    "遮罩：$label",
+                    "maskColor = #${Integer.toHexString(color)}"
                 ),
+                position = GuidePosition.Relative(side = Side.BOTTOM),
                 highlight = GuideHighlight(
                     shape = HoleShape.RoundRect(12.dp),
                     padding = 8.dp,
@@ -490,14 +481,12 @@ class MainActivity : AppCompatActivity() {
     private fun showHoleGlow(anchor: View) {
         presentStep(
             GuideStep(
-                anchor = GuideAnchor.ViewAnchor(anchor),
-                tooltip = GuideTooltip(
-                    content = doneContent(
-                        "挖洞高亮",
-                        "holeOverlayColor = 0x33FFFFFF，给洞内区域叠加一层半透明白色。"
-                    ),
-                    placement = GuidePlacement(side = Side.BOTTOM)
+                view = anchor,
+                content = doneContent(
+                    "挖洞高亮",
+                    "holeOverlayColor = 0x33FFFFFF，给洞内区域叠加一层半透明白色。"
                 ),
+                position = GuidePosition.Relative(side = Side.BOTTOM),
                 highlight = GuideHighlight(
                     shape = HoleShape.RoundRect(12.dp),
                     padding = 8.dp,
@@ -520,7 +509,7 @@ class MainActivity : AppCompatActivity() {
                         titleColor = 0xFF4E342E.toInt(),
                         messageColor = 0xFF6D4C41.toInt()
                     ),
-                    placement = GuidePlacement(side = Side.BOTTOM),
+                    position = GuidePosition.Relative(side = Side.BOTTOM),
                     backgroundColor = 0xFFFFF8E1.toInt(),
                     cornerRadius = 22.dp,
                     strokeColor = 0xFFFFB300.toInt(),
@@ -714,7 +703,7 @@ class MainActivity : AppCompatActivity() {
                         anchor = GuideAnchor.ViewAnchor(anchorA),
                         tooltip = GuideTooltip(
                             content = custom,
-                            placement = GuidePlacement(side = Side.BOTTOM)
+                            position = GuidePosition.below()
                         )
                     )
                 )
@@ -723,14 +712,14 @@ class MainActivity : AppCompatActivity() {
                         anchor = GuideAnchor.ViewAnchor(anchorB),
                         tooltip = GuideTooltip(
                             content = custom,
-                            placement = GuidePlacement(side = Side.TOP)
+                            position = GuidePosition.below()
                         )
                     )
                 )
         )
     }
 
-    /** 用 customPosition 把气泡固定在可用区域底部居中。 */
+    /** 用 [GuidePosition.Custom] 把气泡固定在可用区域底部居中。 */
     private fun showCustomPosition(anchor: View) {
         presentStep(
             GuideStep(
@@ -738,21 +727,71 @@ class MainActivity : AppCompatActivity() {
                 tooltip = GuideTooltip(
                     content = doneContent(
                         "自定义定位",
-                        "customPosition 返回任意矩形；这里固定在可用区域底部居中，并关闭箭头。"
+                        "GuidePosition.Custom 返回任意矩形；这里固定在可用区域底部居中，并关闭箭头。"
                     ),
-                    placement = GuidePlacement(
-                        customPosition = { _, size, available ->
-                            val left = available.centerX() - size.width / 2
-                            val top = available.bottom - size.height - dp(24)
-                            Rect(left, top, left + size.width, top + size.height)
-                        }
-                    ),
+                    position = GuidePosition.Custom { _, size, available ->
+                        val left = available.centerX() - size.width / 2
+                        val top = available.bottom - size.height - dp(24)
+                        Rect(left, top, left + size.width, top + size.height)
+                    },
                     arrow = GuideArrow(enabled = false),
-                    maxWidth = 300.dp
+                    maxWidth = GuideWidth.Fixed(300.dp)
                 ),
                 highlight = GuideHighlight(
                     shape = HoleShape.RoundRect(12.dp),
                     padding = 8.dp
+                )
+            )
+        )
+    }
+
+    /** 气泡宽度占满可用屏幕宽度，两侧保留 [GuideTooltip.edgePadding]。 */
+    private fun showFillScreenWidth(anchor: View) {
+        presentStep(
+            GuideStep(
+                anchor = GuideAnchor.ViewAnchor(anchor),
+                tooltip = GuideTooltip(
+                    content = doneContent(
+                        "GuideWidth.FillScreen",
+                        "气泡宽度 = 可用屏幕宽度 - 两侧 edgePadding。"
+                    ),
+                    position = GuidePosition.Relative(side = Side.BOTTOM),
+                    maxWidth = GuideWidth.FillScreen
+                ),
+                highlight = GuideHighlight(
+                    shape = HoleShape.RoundRect(10.dp),
+                    padding = 6.dp
+                )
+            )
+        )
+    }
+
+    /** 气泡宽度占满遮罩宽度；遮罩由 maskRectProvider 缩小到按钮附近。 */
+    private fun showFillMaskWidth(anchor: View) {
+        presentStep(
+            GuideStep(
+                anchor = GuideAnchor.ViewAnchor(anchor),
+                tooltip = GuideTooltip(
+                    content = doneContent(
+                        "GuideWidth.FillMask",
+                        "气泡宽度 = 遮罩宽度 - 两侧 edgePadding；没有 maskRectProvider 时等同 FillScreen。"
+                    ),
+                    position = GuidePosition.Relative(side = Side.BOTTOM),
+                    maxWidth = GuideWidth.FillMask
+                ),
+                highlight = GuideHighlight(
+                    shape = HoleShape.RoundRect(10.dp),
+                    padding = 6.dp,
+                    maskRectProvider = { _, anchorRect ->
+                        val padX = dp(60)
+                        val padY = dp(140)
+                        Rect(
+                            anchorRect.left - padX,
+                            anchorRect.top - padY,
+                            anchorRect.right + padX,
+                            anchorRect.bottom + padY
+                        )
+                    }
                 )
             )
         )
@@ -779,19 +818,16 @@ class MainActivity : AppCompatActivity() {
         presentStep(
             GuideStep(
                 anchor = GuideAnchor.RectAnchor { fixedScreenRect },
-                tooltip = GuideTooltip(
-                    content = doneContent(
-                        "RectAnchor",
-                        "不依赖任何 View，按屏幕矩形定位与挖洞。"
-                    ),
-                    placement = GuidePlacement(side = Side.BOTTOM)
+                content = doneContent(
+                    "RectAnchor",
+                    "不依赖任何 View，按屏幕矩形定位与挖洞。"
                 ),
+                position = GuidePosition.Relative(side = Side.BOTTOM),
                 highlight = GuideHighlight(
                     shape = HoleShape.RoundRect(14.dp),
                     padding = 0.dp
-                ),
-                followAnchor = false
-            )
+                )
+            ).copy(followAnchor = false)
         )
     }
 

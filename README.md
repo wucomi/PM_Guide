@@ -28,8 +28,8 @@ guide/src/main/java/com/pm/guide/
 ├── GuideOverlayView.kt      # 遮罩、挖洞、动画、箭头、气泡、触摸与穿透
 ├── GuidePositioner.kt       # 纯几何定位器（可单测）
 ├── GuideAnchor.kt           # View / 矩形 / RecyclerView item 锚点
-├── GuidePlacement.kt        # 方位、对齐、间距、溢出、自定义定位
-├── GuideTooltip.kt          # 气泡内容、尺寸、背景样式和箭头
+├── GuidePosition.kt         # 相对/自定义位置、方位、对齐、溢出
+├── GuideTooltip.kt          # 气泡内容、GuideWidth、背景样式和箭头
 ├── GuideHighlight.kt        # 挖洞形状、大小、遮罩颜色、入场动画
 ├── GuideContent.kt          # 默认内容 / 自定义内容 / ViewBinding 内容
 ├── GuideStep.kt             # 步骤、穿透、锚点失效策略
@@ -56,23 +56,32 @@ GuideDialogFragment.builder(this)
             title = "标题区域",
             message = "气泡会围绕这个目标显示。"
         ),
-        placement = GuidePlacement(
-            side = Side.BOTTOM,
-            align = Alignment.CENTER
-        )
+        position = GuidePosition.below()
     )
     .show(supportFragmentManager)
 ```
 
-完整步骤写法：
+最常见的一步引导可以直接用 `GuideStep` 的快捷构造：
+
+```kotlin
+GuideStep(
+    view = binding.guideTargetAction,
+    content = GuideContent.Default("操作", "说明文案"),
+    position = GuidePosition.above(),
+    highlight = GuideHighlight(shape = HoleShape.RoundRect(12.dp))
+)
+```
+
+需要箭头、宽度或气泡样式时，再换成主构造：
 
 ```kotlin
 GuideStep(
     anchor = GuideAnchor.ViewAnchor(binding.guideTargetAction),
     tooltip = GuideTooltip(
         content = GuideContent.Default("操作", "说明文案"),
-        placement = GuidePlacement(side = Side.TOP),
-        arrow = GuideArrow(enabled = true)
+        position = GuidePosition.above(),
+        arrow = GuideArrow(enabled = true),
+        maxWidth = GuideWidth.Fixed(280.dp)
     ),
     highlight = GuideHighlight(shape = HoleShape.RoundRect(12.dp))
 )
@@ -116,30 +125,46 @@ GuideStep(
 - 等待超过 1.5 秒仍拿不到 item，会交回 `anchorLostPolicy` 处理。
 - `position` 在引导展示期间应保持稳定；`childId` 不存在时回退到整个 itemView。
 
-### GuidePlacement：气泡放在哪里
+### GuideTooltip.position：气泡放在哪里
+
+常用方位可以直接用工厂方法：
 
 ```kotlin
-GuidePlacement(
-    side = Side.AUTO,               // AUTO / TOP / BOTTOM / START / END
-    align = Alignment.CENTER,       // START / CENTER / END
-    margin = 8.dp,                  // 从洞（高亮外框）起算
-    offsetX = 0.dp,
-    offsetY = 0.dp,
-    autoOrder = listOf(Side.BOTTOM, Side.TOP, Side.END, Side.START),
+position = GuidePosition.below()                         // 下方，间距 8dp
+position = GuidePosition.above(margin = 12.dp)           // 上方
+position = GuidePosition.startOf(align = Alignment.START)
+position = GuidePosition.endOf()
+position = GuidePosition.of(Side.AUTO)                   // 自动选边
+```
+
+需要完整控制时使用 `Relative`：
+
+```kotlin
+GuideTooltip(
+    content = content,
+    position = GuidePosition.Relative(
+        side = Side.AUTO,               // AUTO / TOP / BOTTOM / START / END
+        align = Alignment.CENTER,       // START / CENTER / END
+        margin = 8.dp,                  // 从洞（高亮外框）起算
+        offsetX = 0.dp,
+        offsetY = 0.dp,
+        autoOrder = listOf(Side.BOTTOM, Side.TOP, Side.END, Side.START)
+    ),
     overflow = Overflow.FLIP_THEN_CLAMP,
     edgePadding = 16.dp
 )
 ```
 
-- `TOP` / `BOTTOM` / `START` / `END` 是相对锚点的四个方位，`START`/`END` 在 RTL 下自动翻转。
+- `GuidePosition.Relative`：`TOP` / `BOTTOM` / `START` / `END` 是相对锚点的四个方位，`START`/`END` 在 RTL 下自动翻转。
 - `Alignment.START/CENTER/END` 控制沿共享边对齐。
 - `Overflow.FLIP_THEN_CLAMP`（默认）：先翻到对侧，仍放不下再平移进可用区域；也支持 `FLIP`、`CLAMP`、`NONE`。
 
 完全自定义定位：
 
 ```kotlin
-GuidePlacement(
-    customPosition = { anchorRect, tooltipSize, availableRect ->
+GuideTooltip(
+    content = content,
+    position = GuidePosition.custom { anchorRect, tooltipSize, availableRect ->
         val left = availableRect.centerX() - tooltipSize.width / 2
         val top = availableRect.bottom - tooltipSize.height - marginPx
         Rect(left, top, left + tooltipSize.width, top + tooltipSize.height)
@@ -147,16 +172,16 @@ GuidePlacement(
 )
 ```
 
-设置 `customPosition` 后 `side` / `align` / `margin` / `offset` 不再参与计算；返回值仍会按 `overflow` 决定是否夹回可用区域。箭头方向由组件根据气泡与锚点的相对位置自动推断。
+`GuidePosition.custom` 绕过选边、对齐和偏移，返回值仍会按 `overflow` 决定是否夹回可用区域。箭头方向由组件根据气泡与锚点的相对位置自动推断。
 
 ### GuideTooltip：气泡长什么样
 
 ```kotlin
 GuideTooltip(
     content = GuideContent.Default("标题", "正文"),
-    placement = GuidePlacement(side = Side.BOTTOM),
+    position = GuidePosition.Relative(side = Side.BOTTOM),
     arrow = GuideArrow(enabled = true, size = 8.dp, edgeInset = 12.dp),
-    maxWidth = 320.dp,
+    maxWidth = GuideWidth.Fixed(320.dp),
     backgroundColor = 0xFFFFF8E1.toInt(),
     cornerRadius = 22.dp,
     strokeColor = 0xFFFFB300.toInt(),
@@ -164,8 +189,70 @@ GuideTooltip(
 )
 ```
 
-- `backgroundColor = null` 时使用主题 `colorSurface`；箭头自动跟随气泡背景色。
-- `cornerRadius` / `strokeColor` / `strokeWidth` 只作用于气泡外框，不影响自定义内容内部布局。
+- `backgroundColor = null` 时，默认内容使用主题 `colorSurface`；自定义内容不绘制库背景，由自定义布局自己实现卡片背景。
+- `cornerRadius` / `strokeColor` / `strokeWidth` 只影响库绘制的气泡外框；自定义内容默认透明时不会绘制外框，这些参数也就不生效。
+
+#### 气泡宽度：GuideWidth
+
+| 写法 | 效果 |
+| --- | --- |
+| `GuideWidth.Fixed(320.dp)` | 最大宽度；内容更窄时收缩到内容宽度 |
+| `GuideWidth.FillScreen` | 占满可用屏幕宽度，两侧预留 `edgePadding` |
+| `GuideWidth.FillMask` | 占满遮罩宽度，两侧预留 `edgePadding`；未设置 `maskRectProvider` 时等同 `FillScreen` |
+
+Fill 模式按 `EXACTLY` 测量气泡宽度，适合整行卡片式引导。`edgePadding` 是 `GuideTooltip` 的参数，宽度和定位共用同一个留白。
+
+#### 自定义气泡 / 箭头
+
+自定义布局里用两个库 ID：
+
+| ID | 说明 |
+| --- | --- |
+| `@id/guide_bubble` | 气泡卡片；库用它的尺寸和位置应用 `GuidePositioner` / `overflow` |
+| `@id/guide_arrow` | 自定义箭头；库按 `resolvedSide` 定位/旋转它，并停止绘制默认 Canvas 箭头 |
+
+箭头和气泡按普通布局写，气泡放在箭头下面：
+
+```xml
+<ImageView
+    android:id="@id/guide_arrow"
+    android:layout_width="30dp"
+    android:layout_height="20dp"
+    android:src="@drawable/my_arrow"
+    app:layout_constraintBottom_toTopOf="@id/guide_bubble"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent" />
+
+<LinearLayout
+    android:id="@id/guide_bubble"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/my_bubble_bg"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/guide_arrow">
+    <!-- 标题、正文、按钮 -->
+</LinearLayout>
+```
+
+```kotlin
+GuideTooltip(
+    content = GuideContent.Custom(R.layout.my_guide) { ... },
+    position = GuidePosition.below()
+)
+```
+
+- `GuidePositioner` 以 `guide_bubble` 的尺寸为准，`FLIP_THEN_CLAMP`、`edgePadding` 重新生效；
+- 库会平移整个自定义布局，让 `guide_bubble` 落在计算出的位置；
+- `guide_arrow` 的最终位置由库根据 `resolvedSide` 和挖孔中心重新计算：
+  - 气泡在挖孔下方时箭头在气泡上边缘；
+  - 气泡在上方时箭头在气泡下边缘并旋转 180°；
+  - 气泡在左右两侧时箭头在对应侧边并旋转 ±90°；
+  - 沿边缘的位置会滑动到挖孔中心附近，不会固定死在气泡中间；
+- 自定义箭头存在时，气泡与挖孔的间距会自动不小于箭头长度，避免箭头伸进挖孔；
+- `GuideArrow.edgeInset` 控制箭头中心距气泡圆角的最小距离；
+- 箭头资源默认按“朝上”绘制；XML 里的位置只作为布局占位，最终视觉位置由库覆盖；
+- 自定义内容默认不绘制库气泡背景，卡片、圆角、描边和箭头都由布局自己实现；
+- 自定义布局根节点建议 `android:clipChildren="false"`，箭头伸出根布局时不会被裁剪。
 
 ### GuideContent：气泡内容
 
@@ -259,7 +346,7 @@ GuideHighlight(
 )
 ```
 
-`holeRectProvider` 返回的矩形同时作为气泡定位基准（`GuidePlacement.margin` 从它起算）。设置后 `padding` 不再生效。
+`holeRectProvider` 返回的矩形同时作为气泡定位基准（`GuidePosition.Relative.margin` 从它起算）。设置后 `padding` 不再生效。
 
 **自定义遮罩范围（局部引导）**：
 
@@ -294,6 +381,18 @@ GuideHighlight(
 动画只在步骤切换后的第一次有效定位时播放；锚点移动（滚动、键盘弹出）时洞和气泡即时跟随，不会重播，避免拖影。
 
 ### GuideStep：单个步骤
+
+简单步骤可以直接用快捷构造：
+
+```kotlin
+GuideStep(
+    view = target,
+    content = GuideContent.Default("标题", "正文"),
+    position = GuidePosition.below()
+)
+```
+
+完整配置：
 
 ```kotlin
 GuideStep(
@@ -402,8 +501,8 @@ Demo 不再有独立的“靶子区”和底部栏：每张卡片里的按钮本
 | 7 · 挖洞动画 | `HoleAnimation.None` / `Scale` / `Fade` |
 | 8 · 锚点穿透 / 点击洞 | `passThroughTargetTouch`、`advanceOnTargetClick` |
 | 9 · 局部遮罩 + 遮罩外穿透 | `GuideHighlight.maskRectProvider`、`passThroughOutsideMask` |
-| 10 · 自定义内容 | `GuideContent.Custom`、`GuideSession` |
-| 11 · 自定义定位 | `GuidePlacement.customPosition`、`GuideArrow(enabled = false)` |
+| 10 · 自定义内容 | `GuideContent.Custom`、`GuideSession`、`@id/guide_bubble`、`@id/guide_arrow` |
+| 11 · 自定义定位 | `GuidePosition.Custom`、`GuideWidth.FillScreen`、`GuideWidth.FillMask`、`GuideArrow(enabled = false)` |
 | 12 · RectAnchor | `GuideAnchor.RectAnchor` |
 | 13 · showOnce | `Builder.showOnce` / `storage` / `GuideStorage.reset` |
 | 14 · RecyclerView item | `GuideAnchor.RecyclerViewItemAnchor`、pending 等待与自动滚动 |

@@ -15,7 +15,7 @@ import androidx.viewbinding.ViewBinding
  * - [Custom]：inflate 自定义布局，使用 `findViewById`；
  * - [CustomBinding]：使用 ViewBinding / DataBinding，不需要 `findViewById`。
  *
- * 组件只负责把内容放进气泡并测量，交互通过 [GuideSession] 控制。
+ * 组件负责把内容放进气泡并测量，交互通过 [GuideSession] 控制。
  */
 sealed interface GuideContent {
 
@@ -61,8 +61,9 @@ sealed interface GuideContent {
      * 使用原始 View 的自定义布局。
      *
      * ## 用法
-     * 组件会给布局套一层统一的圆角气泡背景，[layoutRes] 只需要描述内容本身，
-     * 不需要再画气泡、箭头或外边距。
+     * 自定义内容默认不绘制库气泡背景，卡片、圆角、描边和箭头都由布局自己实现。
+     * 如果需要库按定位策略摆放卡片、按挖孔方向摆放箭头，在布局里用
+     * `@id/guide_bubble` 标记气泡卡片、`@id/guide_arrow` 标记箭头。
      *
      * ```kotlin
      * GuideContent.Custom(R.layout.my_guide) { view, session ->
@@ -106,6 +107,8 @@ sealed interface GuideContent {
      * ```
      *
      * ## 注意
+     * 自定义内容默认不绘制库气泡背景，布局可以用 `@id/guide_bubble` 和
+     * `@id/guide_arrow` 标记卡片与箭头。
      * [create] 的第二个参数是组件内部的气泡容器，用于正确解析 `layout_width`；
      * 请使用 `inflate(inflater, parent, false)`，不要把 root 直接 attach 到 parent。
      *

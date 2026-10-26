@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 自定义气泡卡片；库用它的尺寸和位置应用 GuidePositioner/overflow。 -->
+    <item name="guide_bubble" type="id" />
+
+    <!-- 自定义箭头 View；库按 resolvedSide 定位/旋转它，并停止绘制默认 Canvas 箭头。 -->
+    <item name="guide_arrow" type="id" />
+</resources>

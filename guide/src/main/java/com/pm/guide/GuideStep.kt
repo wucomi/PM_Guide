@@ -1,5 +1,7 @@
 package com.pm.guide
 
+import android.view.View
+
 /**
  * 单个引导步骤。
  *
@@ -9,6 +11,12 @@ package com.pm.guide
  * - [highlight]：遮罩和挖洞；
  * - [passThroughTargetTouch] / [passThroughOutsideMask]：局部交互；
  * - [anchorLostPolicy]：锚点不可见时的行为。
+ *
+ * ## 快捷构造
+ * - `GuideStep(view, content, position, highlight)`：View 锚点 + 默认气泡；
+ * - `GuideStep(anchor, content, position, highlight)`：任意锚点 + 默认气泡。
+ *
+ * 需要箭头、宽度或气泡样式时使用主构造。
  *
  * ## 注意
  * 步骤持有 View 引用，不支持配置变更或进程恢复后自动重建。
@@ -74,7 +82,40 @@ data class GuideStep(
      * 与 [passThroughTargetTouch] 独立，可以同时开启。
      */
     val passThroughOutsideMask: Boolean = false
-)
+) {
+    /**
+     * 常见步骤的快捷构造：只配置内容、位置和挖洞。
+     *
+     * 需要箭头、宽度、气泡样式或穿透选项时，使用主构造搭配 [GuideTooltip]。
+     */
+    constructor(
+        anchor: GuideAnchor,
+        content: GuideContent,
+        position: GuidePosition = GuidePosition.Relative(),
+        highlight: GuideHighlight = GuideHighlight()
+    ) : this(
+        anchor = anchor,
+        tooltip = GuideTooltip(content = content, position = position),
+        highlight = highlight
+    )
+
+    /**
+     * 以 View 为锚点的快捷构造，省掉 [GuideAnchor.ViewAnchor] 包装。
+     *
+     * 只定位一次或需要自定义锚点时，使用主构造。
+     */
+    constructor(
+        view: View,
+        content: GuideContent,
+        position: GuidePosition = GuidePosition.Relative(),
+        highlight: GuideHighlight = GuideHighlight()
+    ) : this(
+        anchor = GuideAnchor.ViewAnchor(view),
+        content = content,
+        position = position,
+        highlight = highlight
+    )
+}
 
 /**
  * 锚点失效时的处理策略。

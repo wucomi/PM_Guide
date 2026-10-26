@@ -476,7 +476,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:hbCode="@string/hb_code_custom_content"
-                app:hbDescription="GuideContent.Custom 直接 inflate 你的 XML，并在 bind 回调里拿到 GuideSession，可以自由控制 previous / next。"
+                app:hbDescription="GuideContent.Custom 直接 inflate 你的 XML；用 @id/guide_bubble 标记卡片、@id/guide_arrow 标记箭头，溢出的定位策略对卡片生效。"
                 app:hbNumber="10"
                 app:hbTitle="自定义气泡内容">
 
@@ -495,14 +495,14 @@
                     android:text="内容锚点 B" />
             </com.example.guide.HandBookSectionView>
 
-            <!-- 11. 自定义定位 -->
+            <!-- 11. 自定义定位与宽度 -->
             <com.example.guide.HandBookSectionView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:hbCode="@string/hb_code_custom_position"
-                app:hbDescription="customPosition 直接返回最终矩形，绕过选边、对齐和偏移。适合底部固定的卡片或完全与锚点无关的布局。"
+                app:hbDescription="GuidePosition.Custom 直接返回最终矩形，绕过选边、对齐和偏移。GuideWidth 控制气泡宽度：固定值、占满屏幕或占满遮罩。"
                 app:hbNumber="11"
-                app:hbTitle="自定义气泡定位">
+                app:hbTitle="自定义气泡定位与宽度">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/customPosition"
@@ -510,6 +510,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="底部居中" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/fillScreenWidth"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="占满屏幕宽" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/fillMaskWidth"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="占满遮罩宽" />
             </com.example.guide.HandBookSectionView>
 
             <!-- 12. RectAnchor -->
