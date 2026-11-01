@@ -1,6 +1,6 @@
 # PM Guide
 
-基于 `DialogFragment` 的 Android 新手引导 / 聚光灯组件。支持锚点跟随、自动选边、翻边、遮罩挖洞、箭头、挖洞动画、自定义挖洞大小与形状、气泡样式、穿透点击和一次性引导。
+基于 `DialogFragment` 的 Android 新手引导 / 聚光灯组件。支持锚点跟随、自动选边、翻边、遮罩高亮区、箭头、高亮区动画、自定义高亮区大小与形状、气泡样式、穿透点击和一次性引导。
 
 接入：
 
@@ -25,12 +25,12 @@ dependencies {
 ```text
 guide/src/main/java/com/pm/guide/
 ├── GuideDialogFragment.kt   # DialogFragment 宿主、Builder、Session
-├── GuideOverlayView.kt      # 遮罩、挖洞、动画、箭头、气泡、触摸与穿透
+├── GuideOverlayView.kt      # 遮罩、高亮区、动画、箭头、气泡、触摸与穿透
 ├── GuidePositioner.kt       # 纯几何定位器（可单测）
 ├── GuideAnchor.kt           # View / 矩形 / RecyclerView item 锚点
 ├── GuidePosition.kt         # 相对/自定义位置、方位、对齐、溢出
 ├── GuideTooltip.kt          # 气泡内容、GuideWidth、背景样式和箭头
-├── GuideHighlight.kt        # 挖洞形状、大小、遮罩颜色、入场动画
+├── GuideHighlight.kt        # 高亮区形状、大小、遮罩颜色、入场动画
 ├── GuideContent.kt          # 默认内容 / 自定义内容 / ViewBinding 内容
 ├── GuideStep.kt             # 步骤、穿透、锚点失效策略
 ├── GuideSession.kt          # 会话控制与生命周期回调
@@ -40,7 +40,7 @@ guide/src/main/java/com/pm/guide/
 app/src/main/java/com/example/guide/
 ├── MainActivity.kt          # API 使用手册 Demo
 ├── HandBookSectionView.kt   # XML 驱动的能力卡片容器
-├── ShapePreviewButton.kt    # 挖洞形状预览按钮（含星形路径工具）
+├── ShapePreviewButton.kt    # 高亮区形状预览按钮（含星形路径工具）
 └── DemoItemAdapter.kt       # RecyclerView item 引导示例适配器
 ```
 
@@ -145,7 +145,7 @@ GuideTooltip(
     position = GuidePosition.Relative(
         side = Side.AUTO,               // AUTO / TOP / BOTTOM / START / END
         align = Alignment.CENTER,       // START / CENTER / END
-        margin = 8.dp,                  // 从洞（高亮外框）起算
+        margin = 8.dp,                  // 从高亮区（高亮外框）起算
         offsetX = 0.dp,
         offsetY = 0.dp,
         autoOrder = listOf(Side.BOTTOM, Side.TOP, Side.END, Side.START)
@@ -181,7 +181,7 @@ GuideTooltip(
     content = GuideContent.Default("标题", "正文"),
     position = GuidePosition.Relative(side = Side.BOTTOM),
     arrow = GuideArrow(enabled = true, size = 8.dp, edgeInset = 12.dp),
-    maxWidth = GuideWidth.Fixed(320.dp),
+    maxWidth = GuideWidth.Wrap,
     backgroundColor = 0xFFFFF8E1.toInt(),
     cornerRadius = 22.dp,
     strokeColor = 0xFFFFB300.toInt(),
@@ -196,6 +196,7 @@ GuideTooltip(
 
 | 写法 | 效果 |
 | --- | --- |
+| `GuideWidth.Wrap` | 默认模式：按内容测量，最大不超过可用宽度；长内容自动换行 |
 | `GuideWidth.Fixed(320.dp)` | 最大宽度；内容更窄时收缩到内容宽度 |
 | `GuideWidth.FillScreen` | 占满可用屏幕宽度，两侧预留 `edgePadding` |
 | `GuideWidth.FillMask` | 占满遮罩宽度，两侧预留 `edgePadding`；未设置 `maskRectProvider` 时等同 `FillScreen` |
@@ -254,16 +255,30 @@ GuideTooltip(
 - 自定义内容默认不绘制库气泡背景，卡片、圆角、描边和箭头都由布局自己实现；
 - 自定义布局根节点建议 `android:clipChildren="false"`，箭头伸出根布局时不会被裁剪。
 
+#### 气泡内容动画：BubbleAnimation
+
+`GuideTooltip.animation` 控制气泡内容入场动画，和高亮区动画 `HoleAnimation` 独立：
+
+| 写法 | 效果 |
+| --- | --- |
+| `BubbleAnimation.None` | 直接显示 |
+| `BubbleAnimation.Fade(400L)` | 淡入，参数是时长 |
+| `BubbleAnimation.Scale(420L, 0.85f)` | 从 0.85 缩放到 1 |
+| `BubbleAnimation.Slide(420L, 16.dp)` | 从下方 16dp 滑入 |
+
+`animation = null`（默认）时沿用 `GuideHighlight.animate` 的旧行为，只做淡入。
+
 ### GuideContent：气泡内容
 
 ```kotlin
-// 内置样式：标题 + 正文 + 下一步/完成/跳过
+// 内置样式：标题 + 正文 + 上一步/下一步/完成/跳过
+// 第 2 步起自动显示“上一步”，点击调用 session.previous()
 GuideContent.Default(
     title = "标题",
     message = "正文",
     primaryLabel = "下一步",
-    finishLabel = "知道了",
-    skipLabel = "跳过",
+    finishLabel = "完成",
+    skipLabel = null,        // 需要“跳过”时再设置文案
     showIndicator = true,
     titleColor = null,
     messageColor = null
@@ -293,41 +308,43 @@ GuideContent.CustomBinding(
 
 自定义背景色较深时，记得同时设置 `titleColor` / `messageColor`（或自定义布局里自己的颜色），否则默认文字颜色来自主题，可能对比度不足。
 
-### GuideHighlight：遮罩与挖洞
+### GuideHighlight：遮罩与高亮区
+
+> 代码 API 仍使用 `Hole` 命名（`HoleShape` / `holeRectProvider` / `holeOverlayColor` / `HoleAnimation`），中文统一称为“高亮区”，两者是同一个概念。
 
 ```kotlin
 GuideHighlight(
-    shape = HoleShape.RoundRect(12.dp),   // null = 不挖洞
+    shape = HoleShape.RoundRect(12.dp),   // null = 无高亮区
     padding = 4.dp,
     maskColor = 0xB3000000.toInt(),       // 任意带 alpha 的背景色
-    holeOverlayColor = Color.TRANSPARENT, // 挖洞区域高亮色，可提亮目标
+    holeOverlayColor = Color.TRANSPARENT, // 高亮区提亮色，可提亮目标
     animate = true,                       // 气泡淡入
-    holeAnimation = HoleAnimation.Scale(  // 洞的入场动画
+    holeAnimation = HoleAnimation.Scale(  // 高亮区的入场动画
         duration = 420L,
         startScale = 0.2f,
         fadeScrim = true
     ),
-    holeRectProvider = null,              // 自定义洞的大小/位置
+    holeRectProvider = null,              // 自定义高亮区的大小/位置
     maskRectProvider = null               // 自定义遮罩范围（默认整屏）
 )
 ```
 
-`holeOverlayColor` 会在洞形状上再叠加一层颜色，与 `maskColor` 独立：
+`holeOverlayColor` 会在高亮区形状上再叠加一层颜色，与 `maskColor` 独立：
 - 半透明白色（如 `0x33FFFFFF`）可以提亮目标；
 - 品牌色/警告色可以做视觉强调；
 - `maskColor` 透明时依然生效。
 
-**挖洞形状**：
+**高亮区形状**：
 
 | 形状 | 说明 |
 | --- | --- |
-| `HoleShape.Rect` | 贴合洞矩形的直角矩形 |
+| `HoleShape.Rect` | 贴合高亮区矩形的直角矩形 |
 | `HoleShape.RoundRect(radius)` | 圆角矩形，半径不超过短边一半 |
 | `HoleShape.Circle(radius?)` | 圆形；`radius = null` 时取内切圆 |
-| `HoleShape.Oval` | 椭圆，填满整个洞矩形 |
+| `HoleShape.Oval` | 椭圆，填满整个高亮区矩形 |
 | `HoleShape.Custom { rect, path -> ... }` | 追加任意 Path，适合星形/异形 |
 
-**自定义洞大小**：
+**自定义高亮区大小**：
 
 ```kotlin
 GuideHighlight(
@@ -376,9 +393,9 @@ GuideHighlight(
 | --- | --- |
 | `HoleAnimation.None` | 直接显示（默认） |
 | `HoleAnimation.Scale(duration, startScale, fadeScrim)` | 从中心缩放，可选遮罩淡入 |
-| `HoleAnimation.Fade(duration)` | 洞大小不变，遮罩淡入 |
+| `HoleAnimation.Fade(duration)` | 高亮区大小不变，遮罩淡入 |
 
-动画只在步骤切换后的第一次有效定位时播放；锚点移动（滚动、键盘弹出）时洞和气泡即时跟随，不会重播，避免拖影。
+动画只在步骤切换后的第一次有效定位时播放；锚点移动（滚动、键盘弹出）时高亮区和气泡即时跟随，不会重播，避免拖影。
 
 ### GuideStep：单个步骤
 
@@ -400,8 +417,8 @@ GuideStep(
     tooltip = GuideTooltip(content = content),
     highlight = GuideHighlight(),
     followAnchor = null,              // null = 使用 Builder 的全局默认值
-    advanceOnTargetClick = false,     // 点击洞 = 下一步，不执行锚点自身逻辑
-    passThroughTargetTouch = false,   // 洞内触摸穿透给锚点
+    advanceOnTargetClick = false,     // 点击高亮区 = 下一步，不执行锚点自身逻辑
+    passThroughTargetTouch = false,   // 高亮区内触摸穿透给锚点
     anchorLostPolicy = AnchorLostPolicy.DISMISS,
     onShown = { session -> /* 埋点 */ },
     passThroughOutsideMask = false    // 遮罩范围之外的触摸穿透给页面
@@ -412,11 +429,11 @@ GuideStep(
 
 | 配置 | 效果 |
 | --- | --- |
-| `passThroughTargetTouch = true` | 洞内的触摸转发给锚点，锚点按钮/开关可以真正点击；引导不会因这次点击关闭 |
+| `passThroughTargetTouch = true` | 高亮区内的触摸转发给锚点，锚点按钮/开关可以真正点击；引导不会因这次点击关闭 |
 | `passThroughOutsideMask = true` | 只有遮罩范围内拦截触摸；配合 `maskRectProvider` 做局部引导，遮罩外的列表仍然可以滚动、点击 |
-| 两者都开启 | 洞内 + 遮罩外都透传，只有“遮罩内且洞外”的区域保持拦截 |
+| 两者都开启 | 高亮区内 + 遮罩外都透传，只有“遮罩内且高亮区外”的区域保持拦截 |
 
-`advanceOnTargetClick` 则是另一种语义：点击洞会调用 `session.next()`，**不会**触发锚点按钮自身的点击事件。它与两种 `passThrough` 互斥使用。
+`advanceOnTargetClick` 则是另一种语义：点击高亮区会调用 `session.next()`，**不会**触发锚点按钮自身的点击事件。它与两种 `passThrough` 互斥使用。
 
 穿透实现说明：Dialog 窗口本身会拦截触摸，组件把事件重新分发到 `activity.window.decorView`，因此只支持宿主是 Activity 的场景。锚点可以是按钮、开关等可交互控件。
 
@@ -487,25 +504,39 @@ GuideDialogFragment.builder(this)
 
 ## Demo 页对应关系
 
-Demo 不再有独立的“靶子区”和底部栏：每张卡片里的按钮本身就是锚点，点击即演示。
+每张卡片按 API 类分组：点一次“开始”，再用气泡里的“下一步/上一步”连续看完该组参数，不需要逐个点锚点。
+
+页面顺序按实际接入流程组织：**基础使用 → 引导位置 → 气泡 → 锚点与高亮区 → 遮罩 → 动态锚点**。
 
 | 卡片 | 涉及的 API |
 | --- | --- |
-| 顶部 hero | 多步骤引导、`GuideListener` |
-| 1 · 步骤切换与会话回调 | `addStep` 连续步骤、`onStepShown` / `onStepLocated` / `onGuideEnded` |
-| 2 · 全部方位 | `Side` / `Alignment` / `offsetX` / `offsetY` / `AUTO` |
-| 3 · 遮罩背景色 | `GuideHighlight.maskColor` / `holeOverlayColor` |
-| 4 · 气泡样式 | `GuideTooltip.backgroundColor` / `cornerRadius` / `strokeColor` / `strokeWidth`、`titleColor` / `messageColor` |
-| 5 · 挖洞形状 | `HoleShape.Rect` / `RoundRect` / `Circle` / `Oval` / `Custom` |
-| 6 · 挖洞大小 | `GuideHighlight.holeRectProvider`、`GuideListener.onStepLocated` |
-| 7 · 挖洞动画 | `HoleAnimation.None` / `Scale` / `Fade` |
-| 8 · 锚点穿透 / 点击洞 | `passThroughTargetTouch`、`advanceOnTargetClick` |
-| 9 · 局部遮罩 + 遮罩外穿透 | `GuideHighlight.maskRectProvider`、`passThroughOutsideMask` |
-| 10 · 自定义内容 | `GuideContent.Custom`、`GuideSession`、`@id/guide_bubble`、`@id/guide_arrow` |
-| 11 · 自定义定位 | `GuidePosition.Custom`、`GuideWidth.FillScreen`、`GuideWidth.FillMask`、`GuideArrow(enabled = false)` |
-| 12 · RectAnchor | `GuideAnchor.RectAnchor` |
-| 13 · showOnce | `Builder.showOnce` / `storage` / `GuideStorage.reset` |
-| 14 · RecyclerView item | `GuideAnchor.RecyclerViewItemAnchor`、pending 等待与自动滚动 |
+| 1 · 创建与展示 | `GuideDialogFragment.Builder`：`addStep` / `build` / `show` / `dismissOnTouchOutside` / `dismissOnBackPress` / `followAnchor` / `listener` / `storage` / `showOnce` |
+| 2 · 步骤与锚点失效 | `GuideStep`：`anchor` / `tooltip` / `highlight` / `followAnchor` / `onShown` / `anchorLostPolicy` / `passThroughTargetTouch` / `passThroughOutsideMask` / `advanceOnTargetClick` |
+| 3 · 生命周期回调 | `GuideListener.onStepShown` / `onStepLocated` / `onGuideEnded`、`GuideEndReason` |
+| 4 · 会话控制 | `GuideSession.steps` / `index` / `next` / `previous` / `goTo` / `finish` / `skip` / `dismiss` |
+| 5 · 只展示一次 | `GuideStorage.wasShown` / `markShown` / `reset`、`Builder.showOnce` |
+| 6 · 方位 | `GuidePosition.Relative` 的 `side` / `align` / `margin` / `offsetX` / `offsetY` / `autoOrder` |
+| 7 · 对齐与偏移 | `Alignment.START` / `CENTER` / `END`、`margin`、`offsetX` / `offsetY` |
+| 8 · 任意位置 | `GuidePosition.Custom` 的 `provider(anchorRect, tooltipSize, availableRect)` |
+| 9 · 溢出策略 | `GuideTooltip.overflow`：`FLIP_THEN_CLAMP` / `FLIP` / `CLAMP` / `NONE` |
+| 10 · 默认气泡 | `GuideContent.Default` 的 `title` / `message` / `primaryLabel` / `finishLabel` / `skipLabel` / `showIndicator` / `titleColor` / `messageColor` |
+| 11 · 自定义气泡内容 | `GuideContent.Custom`、`GuideContent.CustomBinding` |
+| 12 · 自定义气泡标识 | `@id/guide_bubble`、`@id/guide_arrow` |
+| 13 · 气泡宽度 | `GuideWidth.Wrap` / `Fixed` / `FillScreen` / `FillMask`、`edgePadding`、`maskRectProvider` |
+| 14 · 气泡样式 | `GuideTooltip.backgroundColor` / `cornerRadius` / `strokeColor` / `strokeWidth`、`titleColor` / `messageColor` |
+| 15 · 箭头样式 | `GuideArrow.enabled` / `size` / `edgeInset` |
+| 16 · 气泡动画 | `GuideTooltip.animation`：`BubbleAnimation.None` / `Fade` / `Scale` / `Slide` |
+| 17 · 静态锚点 | `GuideAnchor.ViewAnchor`、`GuideAnchor.RectAnchor` |
+| 18 · 高亮区形状 | `HoleShape.Rect` / `RoundRect` / `Circle` / `Oval` / `Custom` |
+| 19 · 高亮区大小 | `GuideHighlight.padding`、`holeRectProvider` |
+| 20 · 无高亮区 | `GuideHighlight.shape = null` |
+| 21 · 高亮区提亮 | `GuideHighlight.holeOverlayColor` |
+| 22 · 高亮区动画 | `HoleAnimation.None` / `Scale` / `Fade` |
+| 23 · 高亮区点击 | `GuideStep.passThroughTargetTouch`、`advanceOnTargetClick` |
+| 24 · 遮罩颜色 | `GuideHighlight.maskColor` |
+| 25 · 局部遮罩 | `GuideHighlight.maskRectProvider`、`GuideStep.passThroughOutsideMask` |
+| 26 · 列表项定位 | `GuideAnchor.RecyclerViewItemAnchor` 的 `position` / `childId` / `scrollToItem` |
+| 27 · 等待可见 | `GuideAnchor.RecyclerViewItemAnchor.isPending`、自动滚动等待 |
 
 ## 状态栏与系统栏
 
@@ -522,6 +553,6 @@ Demo 不再有独立的“靶子区”和底部栏：每张卡片里的按钮本
 - 步骤持有 `View` 引用，配置变更或进程恢复后不会自动重建，会以 `HOST_DESTROYED` 结束。
 - `RectAnchor` 没有对应的 View 生命周期，动态矩形需要外部触发重绘，或设置 `followAnchor = false` 做一次性定位。
 - 穿透点击依赖宿主 Activity 的 `decorView`，纯 Dialog / 其他 Window 宿主不支持。
-- 引导默认是模态的；`passThroughTargetTouch` 放行洞内触摸，`passThroughOutsideMask` 放行遮罩外触摸，两者可以组合使用。
+- 引导默认是模态的；`passThroughTargetTouch` 放行高亮区内触摸，`passThroughOutsideMask` 放行遮罩外触摸，两者可以组合使用。
 - `RecyclerViewItemAnchor` 以 adapter position 为准；如果引导期间数据源顺序变化，锚点会跟随新的 position。目标超过 1.5 秒仍不可见时按 `anchorLostPolicy` 处理。
 - `GuideContent.CustomBinding` 需要宿主模块开启 `viewBinding` 或 `dataBinding`。

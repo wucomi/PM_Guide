@@ -8,25 +8,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import kotlin.math.roundToInt
 
-/**
- * API 手册的单张能力卡片。
- *
- * ## 使用方式
- * 卡片结构、编号、标题、说明、代码块和操作区定义在
- * `view_handbook_section.xml` 中；编号/标题/说明/代码通过自定义属性传入。
- *
- * ```xml
- * <com.example.guide.HandBookSectionView
- *     app:hbNumber="1"
- *     app:hbTitle="标题"
- *     app:hbDescription="说明"
- *     app:hbCode="@string/code" />
- * ```
- *
- * ## 子 View 分流
- * 标签内部声明的子 View 会在 `onFinishInflate` 中移动：
- * `match_parent` → 正文区；其余 → 横向操作区。
- */
+/** API 手册的能力卡片：编号、标题、说明、代码和操作区都由 XML 属性配置。 */
 class HandBookSectionView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -73,13 +55,7 @@ class HandBookSectionView @JvmOverloads constructor(
         }
     }
 
-    /**
-     * 把 XML 中声明在卡片标签内部的子 View 分流：
-     * - `match_parent`：正文区（例如 RecyclerView）；
-     * - 其余：横向操作区（按钮、形状预览）。
-     *
-     * 卡片本身会被跳过，避免形成视图环。
-     */
+    /** 把 match_parent 子 View 放进正文区，其余放进横向操作区。 */
     override fun onFinishInflate() {
         super.onFinishInflate()
         val childrenToMove = ArrayList<View>()

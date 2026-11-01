@@ -15,14 +15,7 @@ import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
-/**
- * 挖洞形状示例用的预览按钮。
- *
- * ## 特点
- * - 按钮本身画成对应形状（矩形 / 圆角 / 圆形 / 椭圆 / 星形）；
- * - 点击前后都能直观看到所选形状，而不是所有按钮都是同一种胶囊；
- * - 通过 `previewShape` / `previewText` 属性配置。
- */
+/** 高亮区形状示例按钮：按 previewShape 画出矩形、圆角、圆形、椭圆或星形。 */
 class ShapePreviewButton @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -143,12 +136,7 @@ class ShapePreviewButton @JvmOverloads constructor(
     }
 }
 
-/**
- * 在 `rect` 内构造五角星路径。
- *
- * ## 说明
- * 形状预览按钮和挖洞示例共用同一套几何，避免两处公式不一致。
- */
+/** 在 rect 内构造五角星路径，供预览按钮和高亮区示例共用。 */
 internal fun buildStarPath(rect: RectF, path: Path, innerRatio: Float = 0.45f) {
     path.reset()
     val cx = rect.centerX()

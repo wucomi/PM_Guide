@@ -36,14 +36,23 @@ data class GuideTooltip(
     val arrow: GuideArrow = GuideArrow(),
 
     /**
+     * 气泡内容入场动画。
+     *
+     * `null` 时沿用 [GuideHighlight.animate] 的旧行为（只做淡入）；
+     * 设置后由这里控制淡入、缩放或滑动。
+     */
+    val animation: BubbleAnimation? = null,
+
+    /**
      * 气泡宽度模式：
+     * - [GuideWidth.Wrap]：按内容测量，最大不超过可用宽度（默认）；
      * - [GuideWidth.Fixed]：固定最大宽度；
      * - [GuideWidth.FillScreen]：占满可用屏幕宽度；
      * - [GuideWidth.FillMask]：占满遮罩区域宽度。
      *
      * Fill 模式会把气泡宽度按 EXACTLY 测量，并预留两侧 [edgePadding]。
      */
-    val maxWidth: GuideWidth = GuideWidth.Fixed(320.dp),
+    val maxWidth: GuideWidth = GuideWidth.Wrap,
 
     /**
      * 气泡背景色。
@@ -86,9 +95,62 @@ data class GuideArrow(
 )
 
 /**
+ * 气泡内容入场动画。
+ *
+ * 作用在气泡容器上，默认内容、自定义内容都会生效；与高亮区动画
+ * [HoleAnimation] 独立。
+ */
+sealed interface BubbleAnimation {
+
+    /** 不做动画，直接显示。 */
+    data object None : BubbleAnimation
+
+    /**
+     * 淡入。
+     *
+     * @param duration 动画时长（毫秒）。
+     */
+    data class Fade(val duration: Long = 180L) : BubbleAnimation
+
+    /**
+     * 从 [startScale] 缩放到 1。
+     *
+     * @param duration 动画时长（毫秒）。
+     * @param startScale 起始缩放，取值 0..1。
+     * @param fade 是否同时淡入。
+     */
+    data class Scale(
+        val duration: Long = 220L,
+        val startScale: Float = 0.9f,
+        val fade: Boolean = true
+    ) : BubbleAnimation
+
+    /**
+     * 从下方 [offset] 滑入。
+     *
+     * @param duration 动画时长（毫秒）。
+     * @param offset 起始纵向偏移。
+     * @param fade 是否同时淡入。
+     */
+    data class Slide(
+        val duration: Long = 220L,
+        val offset: Dp = 12.dp,
+        val fade: Boolean = true
+    ) : BubbleAnimation
+}
+
+/**
  * 气泡宽度模式。
  */
 sealed interface GuideWidth {
+
+    /**
+     * 按内容测量，最大不超过可用宽度。
+     *
+     * 这是默认模式：短内容保持内容宽度，长内容在可用宽度内自动换行。
+     * 自定义内容（[GuideContent.Custom] / [GuideContent.CustomBinding]）默认使用该模式。
+     */
+    data object Wrap : GuideWidth
 
     /**
      * 固定最大宽度；内容更窄时气泡会收缩到内容宽度。

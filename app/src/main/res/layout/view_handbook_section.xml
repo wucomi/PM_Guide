@@ -58,28 +58,35 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="12sp" />
 
-        <TextView
-            android:id="@+id/sectionCode"
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:background="@drawable/bg_handbook_code"
-            android:fontFamily="monospace"
-            android:lineSpacingExtra="2dp"
-            android:paddingStart="12dp"
-            android:paddingTop="10dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="10dp"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textIsSelectable="true"
-            android:textSize="10sp"
-            tools:ignore="SmallSp" />
+            android:scrollbars="none">
+
+            <TextView
+                android:id="@+id/sectionCode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_handbook_code"
+                android:fontFamily="monospace"
+                android:lineSpacingExtra="2dp"
+                android:paddingStart="12dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="10dp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textIsSelectable="true"
+                android:textSize="10sp"
+                tools:ignore="SmallSp" />
+        </HorizontalScrollView>
 
         <!-- 需要整行展示的内容（例如 RecyclerView）会从 XML 子 View 移动到这里 -->
         <LinearLayout
             android:id="@+id/sectionBody"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
             android:orientation="vertical" />
 
         <HorizontalScrollView

@@ -282,7 +282,7 @@ class GuideDialogFragment : DialogFragment() {
         /** 已添加的步骤，按添加顺序执行。 */
         private val steps = mutableListOf<GuideStep>()
 
-        /** 点击气泡和洞以外的区域是否关闭引导。 */
+        /** 点击气泡和高亮区外是否关闭引导。 */
         private var dismissOnTouchOutside: Boolean = false
 
         /** 返回键是否关闭引导。 */
@@ -333,7 +333,7 @@ class GuideDialogFragment : DialogFragment() {
         }
 
         /**
-         * 点击气泡和洞以外的区域是否关闭引导。
+         * 点击气泡和高亮区外是否关闭引导。
          *
          * 默认 `false`：引导通常是模态的，误触外部不应直接跳过。
          */
@@ -478,7 +478,7 @@ fun GuideDialogFragment.Builder.show(
 internal data class GuideConfig(
     /** 步骤列表，按顺序执行。 */
     val steps: List<GuideStep>,
-    /** 点击气泡和洞以外的区域是否关闭。 */
+    /** 点击气泡和高亮区外是否关闭。 */
     val dismissOnTouchOutside: Boolean,
     /** 返回键是否关闭。 */
     val dismissOnBackPress: Boolean,

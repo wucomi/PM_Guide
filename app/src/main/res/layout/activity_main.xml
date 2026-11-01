@@ -41,7 +41,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Hero -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/heroCard"
                 android:layout_width="match_parent"
@@ -65,8 +64,7 @@
                         android:text="@string/handbook_kicker"
                         android:textColor="?attr/colorOnPrimaryContainer"
                         android:textSize="10sp"
-                        android:textStyle="bold"
-                        tools:ignore="SmallSp" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/heroTitle"
@@ -83,58 +81,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:lineSpacingExtra="2dp"
                         android:text="@string/handbook_hero_subtitle"
                         android:textColor="?attr/colorOnPrimaryContainer"
                         android:textSize="13sp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/bg_handbook_chip"
-                            android:paddingStart="10dp"
-                            android:paddingTop="4dp"
-                            android:paddingEnd="10dp"
-                            android:paddingBottom="4dp"
-                            android:text="@string/handbook_chip_dialog"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="10sp"
-                            tools:ignore="SmallSp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:background="@drawable/bg_handbook_chip"
-                            android:paddingStart="10dp"
-                            android:paddingTop="4dp"
-                            android:paddingEnd="10dp"
-                            android:paddingBottom="4dp"
-                            android:text="@string/handbook_chip_hole"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="10sp"
-                            tools:ignore="SmallSp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:background="@drawable/bg_handbook_chip"
-                            android:paddingStart="10dp"
-                            android:paddingTop="4dp"
-                            android:paddingEnd="10dp"
-                            android:paddingBottom="4dp"
-                            android:text="@string/handbook_chip_pass"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="10sp"
-                            tools:ignore="SmallSp" />
-                    </LinearLayout>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/heroStart"
@@ -158,450 +107,1158 @@
                         android:gravity="bottom"
                         android:maxLines="2"
                         android:textColor="?attr/colorOnPrimaryContainer"
-                        android:textSize="10sp"
-                        tools:ignore="SmallSp"
-                        tools:text="onGuideEnded · FINISHED" />
+                        android:textSize="10sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 1. 步骤切换 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="8dp"
+                android:text="一、基础使用"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <!-- 1. 创建与展示 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_builder"
+                app:hbDescription="GuideDialogFragment.Builder：addStep 添加步骤；followAnchor 控制锚点移动时是否重新定位；dismissOnTouchOutside / dismissOnBackPress 控制关闭；listener 提供步骤和结束回调；storage / showOnce 负责只展示一次；build 创建 Fragment，show 展示。"
+                app:hbNumber="1"
+                app:hbTitle="创建与展示">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/builderChipA"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="步骤 1" />
+                    <TextView
+                        android:id="@+id/builderChipB"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="步骤 2" />
+                    <TextView
+                        android:id="@+id/builderChipC"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="步骤 3" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/builderPlay"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/builderBuild"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="build() 后 show" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/builderOutside"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="点击外部关闭" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/builderBackOff"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="返回键不关闭" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 2. 步骤与锚点失效 -->
             <com.example.guide.HandBookSectionView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:hbCode="@string/hb_code_step"
-                app:hbDescription="三步引导依次指向下面三个芯片。点击下一步会重新解析锚点并重新定位，这也是之前气泡丢失的修复点。"
-                app:hbNumber="1"
-                app:hbTitle="步骤切换与会话回调">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/stepA"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="锚点 A" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/stepB"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="锚点 B" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/stepC"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="锚点 C" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/stepPlay"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="播放 3 步" />
-            </com.example.guide.HandBookSectionView>
-
-            <!-- 2. 全部方位 -->
-            <com.example.guide.HandBookSectionView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_placement"
-                app:hbDescription="点击哪个按钮，就以它为锚点。右侧和左侧两个按钮分别放在操作行两端，方便观察 START / END 的真实空间。"
+                app:hbDescription="GuideStep：anchor 指定目标；tooltip 控制气泡；highlight 控制遮罩和高亮区；followAnchor 控制是否跟随；onShown 在定位完成后回调；anchorLostPolicy 决定锚点丢失时 DISMISS / SKIP_NEXT / KEEP；passThroughTargetTouch / passThroughOutsideMask 控制触摸穿透；advanceOnTargetClick 把点击高亮区映射成 next()。"
                 app:hbNumber="2"
-                app:hbTitle="相对锚点的全部方位">
+                app:hbTitle="步骤与锚点失效">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/stepChipA"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="GuideStep A" />
+                    <TextView
+                        android:id="@+id/stepChipB"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="GuideStep B" />
+                    <TextView
+                        android:id="@+id/lostTarget"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="锚点 1" />
+                    <TextView
+                        android:id="@+id/lostNext"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="锚点 2" />
+                </com.example.guide.WrapLayout>
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/placeEnd"
+                    android:id="@+id/stepTour"
                     style="@style/Widget.Handbook.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="右侧 →" />
-
+                    android:text="开始" />
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/placeTop"
+                    android:id="@+id/lostDismiss"
                     style="@style/Widget.Handbook.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="上" />
-
+                    android:text="DISMISS" />
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/placeBottom"
+                    android:id="@+id/lostSkip"
                     style="@style/Widget.Handbook.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="下" />
-
+                    android:text="SKIP_NEXT" />
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/placeAuto"
+                    android:id="@+id/lostKeep"
                     style="@style/Widget.Handbook.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="自动" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/placeStart"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="← 左侧" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/placeAlign"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="对齐+偏移" />
+                    android:text="KEEP" />
             </com.example.guide.HandBookSectionView>
 
-            <!-- 3. 遮罩颜色 -->
+            <!-- 3. 生命周期回调 -->
             <com.example.guide.HandBookSectionView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_mask"
-                app:hbDescription="maskColor 支持任意带 alpha 的颜色；alpha = 0 时不绘制遮罩。holeOverlayColor 可以单独提亮挖洞区域。"
+                app:hbCode="@string/hb_code_listener"
+                app:hbDescription="GuideListener：onStepShown 在步骤切换后回调；onStepLocated 在锚点或气泡几何变化时回调，参数是 anchorRect / holeRect / tooltipRect；onGuideEnded 在结束时回调一次，reason 为 GuideEndReason。"
                 app:hbNumber="3"
-                app:hbTitle="自定义遮罩颜色">
+                app:hbTitle="生命周期回调">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/listenerChip"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="回调锚点" />
+                </com.example.guide.WrapLayout>
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/maskDark"
+                    android:id="@+id/listenerStart"
                     style="@style/Widget.Handbook.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="深色 90%" />
-
+                    android:text="开始" />
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/maskBlue"
+                    android:id="@+id/listenerLost"
                     style="@style/Widget.Handbook.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="蓝色 80%" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/maskPurple"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="紫色 80%" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/maskNone"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="无遮罩" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/maskHoleGlow"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="挖洞高亮" />
+                    android:text="锚点丢失" />
             </com.example.guide.HandBookSectionView>
 
-            <!-- 4. 气泡样式 -->
+            <!-- 4. 会话控制 -->
             <com.example.guide.HandBookSectionView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_bubble"
-                app:hbDescription="背景色、圆角、描边挂在 GuideTooltip 上；深色背景时用 titleColor / messageColor 覆盖文字颜色。"
+                app:hbCode="@string/hb_code_session"
+                app:hbDescription="GuideSession：steps 是本次步骤列表；index 是当前下标；next / previous 前进/后退；goTo 跳到指定步骤；finish / skip / dismiss 分别以完成、跳过、取消结束。"
                 app:hbNumber="4"
-                app:hbTitle="自定义气泡样式">
+                app:hbTitle="会话控制">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/sessionChipA"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="步骤 1" />
+                    <TextView
+                        android:id="@+id/sessionChipB"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="步骤 2" />
+                    <TextView
+                        android:id="@+id/sessionChipC"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="步骤 3" />
+                </com.example.guide.WrapLayout>
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/bubbleStyle"
+                    android:id="@+id/sessionPlay"
                     style="@style/Widget.Handbook.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="播放示例" />
+                    android:text="开始" />
             </com.example.guide.HandBookSectionView>
 
-            <!-- 5. 挖洞形状 -->
-            <com.example.guide.HandBookSectionView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_shape"
-                app:hbDescription="按钮本身就是对应形状。点击后洞会按同一形状绘制，矩形使用布尔差集，不会再出现不挖洞的情况。"
-                app:hbNumber="5"
-                app:hbTitle="自定义挖洞形状">
-
-                <com.example.guide.ShapePreviewButton
-                    android:id="@+id/shapeRect"
-                    android:layout_width="104dp"
-                    android:layout_height="48dp"
-                    app:previewShape="rect"
-                    app:previewText="矩形" />
-
-                <com.example.guide.ShapePreviewButton
-                    android:id="@+id/shapeRound"
-                    android:layout_width="104dp"
-                    android:layout_height="48dp"
-                    app:previewShape="roundRect"
-                    app:previewText="圆角" />
-
-                <com.example.guide.ShapePreviewButton
-                    android:id="@+id/shapeCircle"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    app:previewShape="circle"
-                    app:previewText="圆形" />
-
-                <com.example.guide.ShapePreviewButton
-                    android:id="@+id/shapeOval"
-                    android:layout_width="120dp"
-                    android:layout_height="52dp"
-                    app:previewShape="oval"
-                    app:previewText="椭圆" />
-
-                <com.example.guide.ShapePreviewButton
-                    android:id="@+id/shapeStar"
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    app:previewShape="star"
-                    app:previewText="星形" />
-            </com.example.guide.HandBookSectionView>
-
-            <!-- 6. 挖洞大小 -->
-            <com.example.guide.HandBookSectionView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_size"
-                app:hbDescription="holeRectProvider 会收到锚点的可见屏幕矩形，可以据此返回任意大小或偏移的洞，返回值同时作为气泡定位基准。"
-                app:hbNumber="6"
-                app:hbTitle="自定义挖洞大小">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/sizeDefault"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="默认" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/sizeLarge"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="四周放大" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/sizeFixed"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="固定 180×88" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/sizeAnchor"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="锚点+最小尺寸" />
-            </com.example.guide.HandBookSectionView>
-
-            <!-- 7. 挖洞动画 -->
-            <com.example.guide.HandBookSectionView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_animation"
-                app:hbDescription="Scale 以洞中心缩放并可选遮罩淡入；Fade 只淡入遮罩。动画只在步骤首次定位时播放，锚点移动不会重播。"
-                app:hbNumber="7"
-                app:hbTitle="挖洞入场动画">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/animNone"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="无动画" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/animScale"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="缩放+淡入" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/animFade"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="仅淡入" />
-            </com.example.guide.HandBookSectionView>
-
-            <!-- 8. 锚点穿透 -->
-            <com.example.guide.HandBookSectionView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_pass"
-                app:hbDescription="第一次点击计数按钮打开引导；之后透过洞点击它才会 +1。点击洞进入下一步则只触发 next()，不执行按钮自身逻辑。"
-                app:hbNumber="8"
-                app:hbTitle="锚点穿透 / 点击洞">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/passCounter"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/demo_counter_start" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/passAdvance"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="点击洞 = 完成" />
-            </com.example.guide.HandBookSectionView>
-
-            <!-- 9. 局部遮罩 -->
-            <com.example.guide.HandBookSectionView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_local_mask"
-                app:hbDescription="maskRectProvider 缩小遮罩范围，passThroughOutsideMask 放行范围之外的触摸。弹引导后仍然可以上下滚动列表。"
-                app:hbNumber="9"
-                app:hbTitle="局部遮罩 + 遮罩外穿透">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/localMask"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="只遮罩按钮附近" />
-            </com.example.guide.HandBookSectionView>
-
-            <!-- 10. 自定义内容 -->
-            <com.example.guide.HandBookSectionView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_custom_content"
-                app:hbDescription="GuideContent.Custom 直接 inflate 你的 XML；用 @id/guide_bubble 标记卡片、@id/guide_arrow 标记箭头，溢出的定位策略对卡片生效。"
-                app:hbNumber="10"
-                app:hbTitle="自定义气泡内容">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/customA"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="内容锚点 A" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/customB"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="内容锚点 B" />
-            </com.example.guide.HandBookSectionView>
-
-            <!-- 11. 自定义定位与宽度 -->
-            <com.example.guide.HandBookSectionView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_custom_position"
-                app:hbDescription="GuidePosition.Custom 直接返回最终矩形，绕过选边、对齐和偏移。GuideWidth 控制气泡宽度：固定值、占满屏幕或占满遮罩。"
-                app:hbNumber="11"
-                app:hbTitle="自定义气泡定位与宽度">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/customPosition"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="底部居中" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/fillScreenWidth"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="占满屏幕宽" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/fillMaskWidth"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="占满遮罩宽" />
-            </com.example.guide.HandBookSectionView>
-
-            <!-- 12. RectAnchor -->
-            <com.example.guide.HandBookSectionView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:hbCode="@string/hb_code_rect_anchor"
-                app:hbDescription="RectAnchor 用屏幕矩形做锚点，不依赖 View，适合 Canvas、SurfaceView 或跨窗口目标。"
-                app:hbNumber="12"
-                app:hbTitle="RectAnchor：不依赖 View">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/rectAnchor"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="高亮按钮矩形" />
-            </com.example.guide.HandBookSectionView>
-
-            <!-- 13. showOnce -->
+            <!-- 5. 只展示一次 -->
             <com.example.guide.HandBookSectionView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:hbCode="@string/hb_code_show_once"
-                app:hbDescription="showOnce 完成或跳过才落盘，返回键关闭不算看过。展示过一次后，可以在卡片里直接重置状态。"
-                app:hbNumber="13"
-                app:hbTitle="showOnce / 自定义存储">
+                app:hbDescription="GuideStorage：wasShown 判断是否已展示；markShown 在完成或跳过时写标记；reset 清除标记；showOnce 只有 FINISHED / SKIPPED 会落盘，DISMISSED / ANCHOR_LOST / HOST_DESTROYED 不算看过。"
+                app:hbNumber="5"
+                app:hbTitle="只展示一次">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/showOnce"
                     style="@style/Widget.Handbook.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="展示（仅一次）" />
-
+                    android:text="开始（仅一次）" />
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/showOnceReset"
                     style="@style/Widget.Handbook.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="重置状态" />
+                    android:text="重置" />
             </com.example.guide.HandBookSectionView>
 
-            <!-- 14. RecyclerView item -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="8dp"
+                android:text="二、引导位置"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <!-- 6. 方位 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_side"
+                app:hbDescription="GuidePosition.Relative：side 指定 TOP / BOTTOM / START / END / AUTO；align 指定共享边上的 START / CENTER / END；margin 从高亮外框起算；offsetX / offsetY 在选边和对齐后追加；autoOrder 是 AUTO 的候选顺序。"
+                app:hbNumber="6"
+                app:hbTitle="方位">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/sideChipTop"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TOP" />
+                    <TextView
+                        android:id="@+id/sideChipBottom"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="BOTTOM" />
+                    <TextView
+                        android:id="@+id/sideChipStart"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="START" />
+                    <TextView
+                        android:id="@+id/sideChipEnd"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="END" />
+                    <TextView
+                        android:id="@+id/sideChipAuto"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AUTO" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/sideTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 7. 对齐与偏移 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_align"
+                app:hbDescription="GuidePosition.Relative：align 的 START / CENTER / END 分别对齐共享边的起点、中点、终点；margin 控制气泡与高亮外框的距离；offsetX / offsetY 在选边和对齐之后追加。"
+                app:hbNumber="7"
+                app:hbTitle="对齐与偏移">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/alignChipStart"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="START" />
+                    <TextView
+                        android:id="@+id/alignChipCenter"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="CENTER" />
+                    <TextView
+                        android:id="@+id/alignChipEnd"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="END" />
+                    <TextView
+                        android:id="@+id/offsetChip"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="OFFSET" />
+                    <TextView
+                        android:id="@+id/marginChip"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="MARGIN" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/alignTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 8. 任意位置 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_custom_position"
+                app:hbDescription="GuidePosition.Custom：provider 接收 anchorRect、tooltipSize、availableRect，返回气泡最终矩形；overflow 决定返回的矩形是否按可用区域夹回。"
+                app:hbNumber="8"
+                app:hbTitle="任意位置">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/posChipBottom"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="BOTTOM" />
+                    <TextView
+                        android:id="@+id/posChipTop"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TOP" />
+                    <TextView
+                        android:id="@+id/posChipCenter"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="CENTER" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/customPosTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 9. 溢出策略 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_overflow"
+                app:hbDescription="GuideTooltip.overflow：FLIP_THEN_CLAMP 先翻到对侧，仍放不下再平移；FLIP 只翻边；CLAMP 只平移；NONE 不做约束，仅用于调试。"
+                app:hbNumber="9"
+                app:hbTitle="溢出策略">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/overflowChip"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="锚点" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/overflowFlipThenClamp"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FLIP_THEN_CLAMP" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/overflowFlip"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FLIP" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/overflowClamp"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CLAMP" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/overflowNone"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="NONE" />
+            </com.example.guide.HandBookSectionView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="8dp"
+                android:text="三、气泡"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <!-- 10. 默认气泡 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_content_default"
+                app:hbDescription="GuideContent.Default：title 标题；message 正文；primaryLabel 非最后一步主按钮；finishLabel 最后一步主按钮；skipLabel 跳过按钮，null 不显示；showIndicator 控制步骤指示；titleColor / messageColor 覆盖文字颜色。"
+                app:hbNumber="10"
+                app:hbTitle="默认气泡">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/defaultChipA"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="默认 A" />
+                    <TextView
+                        android:id="@+id/defaultChipB"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="默认 B" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/defaultTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 11. 自定义气泡内容 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_content_custom"
+                app:hbDescription="GuideContent：Custom 用 layoutRes + bind，通过 findViewById 绑定交互；CustomBinding 用 create + bind，直接拿 ViewBinding；两者的按钮通过 GuideSession 控制流程。"
+                app:hbNumber="11"
+                app:hbTitle="自定义气泡内容">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/customContentChipA"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Custom" />
+                    <TextView
+                        android:id="@+id/customContentChipB"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="CustomBinding" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/customContentTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 12. 自定义气泡 ID -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_custom_ids"
+                app:hbDescription="GuideContent.CustomBinding：自定义布局里用 @id/guide_bubble 标记气泡卡片，库用它的尺寸和位置应用 GuidePosition 和 overflow；用 @id/guide_arrow 标记箭头，库按 resolvedSide 旋转；没有 guide_arrow 时绘制默认箭头。"
+                app:hbNumber="12"
+                app:hbTitle="自定义气泡标识">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/arrowChipTop"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TOP" />
+                    <TextView
+                        android:id="@+id/arrowChipBottom"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="BOTTOM" />
+                    <TextView
+                        android:id="@+id/arrowChipStart"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="START" />
+                    <TextView
+                        android:id="@+id/arrowChipEnd"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="END" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/customIdTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 13. 气泡宽度 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_width"
+                app:hbDescription="GuideWidth：Wrap 按内容测量，最大不超过可用宽度，是默认值；Fixed 限制最大宽度；FillScreen 按可用屏幕宽度测量；FillMask 按 maskRectProvider 的遮罩宽度测量；edgePadding 是两侧留白。"
+                app:hbNumber="13"
+                app:hbTitle="气泡宽度">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/widthChipWrap"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Wrap" />
+                    <TextView
+                        android:id="@+id/widthChipFixed"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fixed" />
+                    <TextView
+                        android:id="@+id/widthChipScreen"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="FillScreen" />
+                    <TextView
+                        android:id="@+id/widthChipMask"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="FillMask" />
+                    <TextView
+                        android:id="@+id/widthChipPadding"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="edgePadding" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/widthTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 14. 气泡样式 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_bubble"
+                app:hbDescription="GuideTooltip：backgroundColor 背景色；cornerRadius 圆角；strokeColor / strokeWidth 描边；titleColor / messageColor 覆盖 Default 内容文字颜色。"
+                app:hbNumber="14"
+                app:hbTitle="气泡样式">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/styleChipLight"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="浅色" />
+                    <TextView
+                        android:id="@+id/styleChipDark"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="深色" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/styleTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 15. 箭头样式 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_arrow"
+                app:hbDescription="GuideArrow：enabled 控制默认箭头和自定义 guide_arrow 是否显示；size 是默认箭头伸出长度；edgeInset 是箭头中心距气泡圆角的最小距离。"
+                app:hbNumber="15"
+                app:hbTitle="箭头样式">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/arrowStyleLarge"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="大箭头" />
+                    <TextView
+                        android:id="@+id/arrowStyleNone"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="关闭箭头" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/arrowTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 16. 气泡动画 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_bubble_animation"
+                app:hbDescription="GuideTooltip.animation：None 直接显示；Fade 淡入；Scale 从 startScale 缩放到 1；Slide 从下方 offset 滑入。动画作用在气泡内容上，和高亮区动画 HoleAnimation 独立。"
+                app:hbNumber="16"
+                app:hbTitle="气泡动画">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/bubbleAnimFade"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fade" />
+                    <TextView
+                        android:id="@+id/bubbleAnimScale"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Scale" />
+                    <TextView
+                        android:id="@+id/bubbleAnimSlide"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Slide" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/bubbleAnimTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="8dp"
+                android:text="四、锚点与高亮区"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <!-- 17. 静态锚点 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_anchor"
+                app:hbDescription="GuideAnchor：ViewAnchor 按 View 的可见矩形定位；RectAnchor 按屏幕矩形定位，不依赖 View；RecyclerViewItemAnchor 按 adapter position 解析，childId 指定 item 内控件，scrollToItem 控制自动滚动。"
+                app:hbNumber="17"
+                app:hbTitle="静态锚点">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/anchorChipView"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ViewAnchor" />
+                    <TextView
+                        android:id="@+id/anchorChipRect"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="RectAnchor" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/anchorTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 18. 高亮区形状 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_shape"
+                app:hbDescription="HoleShape：Rect 直角矩形；RoundRect(radius) 圆角矩形；Circle(radius) 圆形，radius 为 null 时取内切圆；Oval 椭圆；Custom 用回调把任意 Path 追加到高亮区形状。"
+                app:hbNumber="18"
+                app:hbTitle="高亮区形状">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <com.example.guide.ShapePreviewButton
+                        android:id="@+id/shapeRect"
+                        android:layout_width="104dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginBottom="8dp"
+                        app:previewShape="rect"
+                        app:previewText="矩形" />
+                    <com.example.guide.ShapePreviewButton
+                        android:id="@+id/shapeRound"
+                        android:layout_width="104dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginBottom="8dp"
+                        app:previewShape="roundRect"
+                        app:previewText="圆角" />
+                    <com.example.guide.ShapePreviewButton
+                        android:id="@+id/shapeCircle"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginBottom="8dp"
+                        app:previewShape="circle"
+                        app:previewText="圆形" />
+                    <com.example.guide.ShapePreviewButton
+                        android:id="@+id/shapeOval"
+                        android:layout_width="120dp"
+                        android:layout_height="52dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginBottom="8dp"
+                        app:previewShape="oval"
+                        app:previewText="椭圆" />
+                    <com.example.guide.ShapePreviewButton
+                        android:id="@+id/shapeStar"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginBottom="8dp"
+                        app:previewShape="star"
+                        app:previewText="星形" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/shapeTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 19. 高亮区大小 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_size"
+                app:hbDescription="GuideHighlight：padding 是锚点矩形向外扩展的距离；holeRectProvider 返回自定义高亮区矩形，返回值同时作为气泡定位基准。"
+                app:hbNumber="19"
+                app:hbTitle="高亮区大小">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/sizeChipDefault"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="默认" />
+                    <TextView
+                        android:id="@+id/sizeChipLarge"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="放大" />
+                    <TextView
+                        android:id="@+id/sizeChipFixed"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="固定" />
+                    <TextView
+                        android:id="@+id/sizeChipAnchor"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="锚点+最小" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/sizeTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 20. 无高亮区 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_no_hole"
+                app:hbDescription="GuideHighlight：shape = null 表示无高亮区，只绘制整层遮罩；maskColor 仍然生效，适合只做页面压暗、不强调某个控件。"
+                app:hbNumber="20"
+                app:hbTitle="无高亮区">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/noHoleChip"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="无高亮区锚点" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/noHoleStart"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 21. 高亮区提亮 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_hole_glow"
+                app:hbDescription="GuideHighlight：holeOverlayColor 在高亮区形状上单独叠加颜色，常用半透明白色提亮目标；与 maskColor 独立，maskColor 全透明时仍然生效。"
+                app:hbNumber="21"
+                app:hbTitle="高亮区提亮">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/holeGlowChip"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="高亮锚点" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/holeGlowStart"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 22. 高亮区动画 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_animation"
+                app:hbDescription="HoleAnimation：None 不做动画；Scale 从 startScale 缩放到 1，duration 是时长，fadeScrim 控制遮罩同步淡入；Fade 只淡入遮罩。"
+                app:hbNumber="22"
+                app:hbTitle="高亮区动画">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/animChipNone"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="None" />
+                    <TextView
+                        android:id="@+id/animChipScale"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Scale" />
+                    <TextView
+                        android:id="@+id/animChipFade"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fade" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/animTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 23. 高亮区点击 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_interaction"
+                app:hbDescription="GuideStep：passThroughTargetTouch 把高亮区内触摸转发给宿主 Activity；advanceOnTargetClick 把点击高亮区映射成 session.next()，不执行按钮自身逻辑。"
+                app:hbNumber="23"
+                app:hbTitle="高亮区点击">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/holeClickPass"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="点击计数：0 · 点我开始" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/holeClickAdvance"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="点击高亮区 = 完成" />
+            </com.example.guide.HandBookSectionView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="8dp"
+                android:text="五、遮罩"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <!-- 24. 遮罩颜色 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_mask"
+                app:hbDescription="GuideHighlight：maskColor 控制整层遮罩颜色和透明度，alpha 为 0 时不绘制；支持任意带 alpha 的颜色。"
+                app:hbNumber="24"
+                app:hbTitle="遮罩颜色">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/maskChipDark"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="深色" />
+                    <TextView
+                        android:id="@+id/maskChipBlue"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="蓝色" />
+                    <TextView
+                        android:id="@+id/maskChipPurple"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="紫色" />
+                    <TextView
+                        android:id="@+id/maskChipNone"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="无遮罩" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/maskColorTour"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <!-- 25. 局部遮罩 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_local_mask"
+                app:hbDescription="GuideHighlight.maskRectProvider 缩小遮罩范围；GuideStep.passThroughOutsideMask 放行遮罩范围外的触摸。两者一起使用时，只压暗目标附近，页面其他区域仍可交互。"
+                app:hbNumber="25"
+                app:hbTitle="局部遮罩">
+
+                <com.example.guide.WrapLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/localMaskChip"
+                        style="@style/Widget.Handbook.AnchorChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="局部遮罩锚点" />
+                </com.example.guide.WrapLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/localMaskStart"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="8dp"
+                android:text="六、动态锚点"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <!-- 26. RecyclerView item -->
             <com.example.guide.HandBookSectionView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:hbCode="@string/hb_code_recycler"
-                app:hbDescription="按 adapter position 解析 item 锚点，不持有 itemView。目标不在屏幕上时会自动滚动，并等待布局完成后再显示气泡。"
-                app:hbNumber="14"
-                app:hbTitle="RecyclerView item 引导">
+                app:hbDescription="GuideAnchor.RecyclerViewItemAnchor：position 是 adapter position；childId 指定 item 内控件，View.NO_ID 表示整个 itemView；scrollToItem 控制不可见时自动滚动。"
+                app:hbNumber="26"
+                app:hbTitle="列表项定位">
+
+                <TextView
+                    android:id="@+id/itemStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:text="点击“开始”后等待定位。"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="11sp" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/itemRecycler"
                     android:layout_width="match_parent"
                     android:layout_height="132dp"
-                    android:layout_marginTop="10dp"
+                    android:layout_marginTop="8dp"
                     android:clipToPadding="false"
-                    android:paddingStart="0dp"
                     android:paddingEnd="8dp"
-                    android:scrollbars="none"
-                    tools:itemCount="3"
-                    tools:listitem="@layout/view_demo_item" />
+                    android:scrollbars="none" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/guideItemThird"
+                    android:id="@+id/recyclerTour"
                     style="@style/Widget.Handbook.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="引导第 3 个" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/guideItemLast"
-                    style="@style/Widget.Handbook.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="引导第 8 个（自动滚动）" />
+                    android:text="开始" />
             </com.example.guide.HandBookSectionView>
+
+            <!-- 27. 等待可见 -->
+            <com.example.guide.HandBookSectionView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:hbCode="@string/hb_code_wait_visible"
+                app:hbDescription="GuideAnchor.RecyclerViewItemAnchor：isPending 表示正在等待滚动和布局；等待期间不会触发 anchorLostPolicy；超时后按策略处理。"
+                app:hbNumber="27"
+                app:hbTitle="等待可见">
+
+                <TextView
+                    android:id="@+id/waitStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:text="点击“开始”后等待定位。"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="11sp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/waitRecycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="132dp"
+                    android:layout_marginTop="8dp"
+                    android:clipToPadding="false"
+                    android:paddingEnd="8dp"
+                    android:scrollbars="none" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/waitStart"
+                    style="@style/Widget.Handbook.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="开始" />
+            </com.example.guide.HandBookSectionView>
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

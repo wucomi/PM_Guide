@@ -23,6 +23,7 @@ sealed interface GuideContent {
      * 组件内置样式：标题 + 正文 + 操作按钮。
      *
      * ## 按钮语义
+     * - 第 2 步起自动显示“上一步”按钮，点击调用 [GuideSession.previous]；
      * - 主按钮在非最后一步显示 [primaryLabel]，最后一步显示 [finishLabel]；
      * - [skipLabel] 为 null 时不显示跳过按钮，点击跳过触发 [GuideSession.skip]；
      * - [showIndicator] 控制 “1/3” 形式的步骤指示。
@@ -42,10 +43,10 @@ sealed interface GuideContent {
         val primaryLabel: CharSequence = "下一步",
 
         /** 最后一步的主按钮文案。 */
-        val finishLabel: CharSequence = "知道了",
+        val finishLabel: CharSequence = "完成",
 
-        /** 跳过按钮文案；null 表示不显示。 */
-        val skipLabel: CharSequence? = "跳过",
+        /** 跳过按钮文案；null 表示不显示（默认）。 */
+        val skipLabel: CharSequence? = null,
 
         /** 是否显示 “1/3” 形式的步骤指示。 */
         val showIndicator: Boolean = true,

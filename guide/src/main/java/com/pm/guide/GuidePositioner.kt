@@ -50,7 +50,7 @@ object GuidePositioner {
      * 使用 [GuidePosition.Custom] 时，纯度由调用方提供的回调决定。
      *
      * @param anchorRect 锚点可见矩形。
-     * @param highlightRect 高亮/挖洞基准矩形，决定气泡间距的起算位置。
+     * @param highlightRect 高亮/高亮区基准矩形，决定气泡间距的起算位置。
      * @param tooltipWidth 气泡测量后的宽度。
      * @param tooltipHeight 气泡测量后的高度。
      * @param availableRect 气泡允许占用的区域，已扣除系统栏和键盘。

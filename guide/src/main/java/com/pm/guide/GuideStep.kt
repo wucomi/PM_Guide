@@ -8,7 +8,7 @@ import android.view.View
  * ## 组成
  * - [anchor]：引导指向哪里；
  * - [tooltip]：气泡内容和位置；
- * - [highlight]：遮罩和挖洞；
+ * - [highlight]：遮罩和高亮区；
  * - [passThroughTargetTouch] / [passThroughOutsideMask]：局部交互；
  * - [anchorLostPolicy]：锚点不可见时的行为。
  *
@@ -28,7 +28,7 @@ data class GuideStep(
     /** 跟随锚点的气泡及摆放规则。 */
     val tooltip: GuideTooltip,
 
-    /** 遮罩与高亮洞；默认启用。 */
+    /** 遮罩与高亮高亮区；默认启用。 */
     val highlight: GuideHighlight = GuideHighlight(),
 
     /**
@@ -43,7 +43,7 @@ data class GuideStep(
     /**
      * 点击高亮区域是否等同于点击“下一步”。
      *
-     * 实现方式是在洞的位置做点击命中，并调用 [GuideSession.next]；
+     * 实现方式是在高亮区的位置做点击命中，并调用 [GuideSession.next]；
      * 不是事件穿透，因此锚点自身的点击逻辑不会执行。
      * 需要锚点真正可点击时改用 [passThroughTargetTouch]。
      */
@@ -59,15 +59,15 @@ data class GuideStep(
     val onShown: ((GuideSession) -> Unit)? = null,
 
     /**
-     * 是否把落在高亮洞内的触摸**转发给宿主 Activity**，实现局部可交互引导。
+     * 是否把落在高亮高亮区内的触摸**转发给宿主 Activity**，实现局部可交互引导。
      *
      * Dialog 窗口本身会拦截触摸，组件通过把 MotionEvent 重新分发到
      * `activity.window.decorView` 来让底部控件正常工作，因此：
      * - 锚点可以是一个按钮、开关、输入框等真实交互控件；
-     * - 引导不会因为点击洞而关闭，仍由气泡上的按钮控制流程；
+     * - 引导不会因为点击高亮区而关闭，仍由气泡上的按钮控制流程；
      * - 仅支持宿主是 Activity 的场景；Fragment 需挂在 Activity 上。
      *
-     * 与 [advanceOnTargetClick] 互斥，开启本项后不再触发“点击洞进入下一步”。
+     * 与 [advanceOnTargetClick] 互斥，开启本项后不再触发“点击高亮区进入下一步”。
      */
     val passThroughTargetTouch: Boolean = false,
 
@@ -84,7 +84,7 @@ data class GuideStep(
     val passThroughOutsideMask: Boolean = false
 ) {
     /**
-     * 常见步骤的快捷构造：只配置内容、位置和挖洞。
+     * 常见步骤的快捷构造：只配置内容、位置和高亮区。
      *
      * 需要箭头、宽度、气泡样式或穿透选项时，使用主构造搭配 [GuideTooltip]。
      */

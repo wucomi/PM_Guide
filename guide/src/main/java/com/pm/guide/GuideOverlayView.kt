@@ -38,14 +38,14 @@ import kotlin.math.roundToInt
  * 引导的渲染层。
  *
  * ## 职责
- * - 绘制遮罩、挖洞、箭头和气泡；
+ * - 绘制遮罩、高亮区、箭头和气泡；
  * - 跟踪锚点并处理跟随、失效与 pending 状态；
  * - 处理气泡内点击、锚点穿透和遮罩外穿透。
  *
  * ## 布局
  * - 作为 `DialogFragment` 的根 View 全屏铺开，不参与业务布局；
  * - 气泡是它的子 View，位置由 [GuidePositioner] 计算后手动 layout；
- * - 遮罩和挖洞直接画在 Canvas 上，使用 Overlay 本地坐标。
+ * - 遮罩和高亮区直接画在 Canvas 上，使用 Overlay 本地坐标。
  */
 internal class GuideOverlayView @JvmOverloads constructor(
     context: Context,
@@ -55,7 +55,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
     /** 当前步骤的锚点失效时回调；具体是关闭、跳过还是保留由宿主决定。 */
     var anchorLostListener: (() -> Unit)? = null
 
-    /** 点击气泡和洞以外的区域是否关闭引导。 */
+    /** 点击气泡和高亮区外是否关闭引导。 */
     var dismissOnTouchOutside: Boolean = false
 
     /** [GuideStep.followAnchor] 为 null 时使用的全局默认值。 */
@@ -85,16 +85,16 @@ internal class GuideOverlayView @JvmOverloads constructor(
     /** 箭头画笔。 */
     private val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
-    /** 洞内高亮层画笔；用于 [GuideHighlight.holeOverlayColor]。 */
+    /** 高亮区内高亮层画笔；用于 [GuideHighlight.holeOverlayColor]。 */
     private val holeOverlayPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     /** 遮罩区域路径。 */
     private val maskPath = Path()
 
-    /** 当前洞形状路径。 */
+    /** 当前高亮区形状路径。 */
     private val holeShapePath = Path()
 
-    /** 遮罩减去洞之后的绘制路径。 */
+    /** 遮罩减去高亮区之后的绘制路径。 */
     private val holeResultPath = Path()
 
     /** 箭头三角形路径。 */
@@ -106,10 +106,10 @@ internal class GuideOverlayView @JvmOverloads constructor(
     /** 当前会话，用于 next / finish 等流程控制。 */
     private var session: GuideSession? = null
 
-    /** 目标挖洞矩形；命中测试和回调使用它。 */
+    /** 目标高亮区矩形；命中测试和回调使用它。 */
     private val holeRect = RectF()
 
-    /** 实际绘制的挖洞矩形；入场动画期间与 [holeRect] 不同。 */
+    /** 实际绘制的高亮区矩形；入场动画期间与 [holeRect] 不同。 */
     private val animatedHoleRect = RectF()
 
     /** 遮罩绘制范围；[GuideHighlight.maskRectProvider] 为 null 时铺满窗口。 */
@@ -159,9 +159,9 @@ internal class GuideOverlayView @JvmOverloads constructor(
     /** 锚点丢失且策略为 KEEP 时，是否允许气泡回退到屏幕中央。 */
     private var fallbackAllowed = false
 
-    // ---- 挖洞动画 ----
+    // ---- 高亮区动画 ----
 
-    /** 挖洞入场动画；null 表示没有正在播放的动画。 */
+    /** 高亮区入场动画；null 表示没有正在播放的动画。 */
     private var holeAnimator: ValueAnimator? = null
 
     /** 当前步骤是否已经播过入场动画，避免锚点移动时重播。 */
@@ -183,7 +183,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
     /** 非气泡区域按下时的起点，用于判断是否为一次点击。 */
     private var downPoint: PointF? = null
 
-    /** 当前手势是否从挖孔内开始（用于“点击洞进入下一步”）。 */
+    /** 当前手势是否从挖孔内开始（用于“点击高亮区进入下一步”）。 */
     private var touchStartedInHole = false
 
     /** 当前手势是否从气泡内部开始（用于把事件交给子 View）。 */
@@ -200,7 +200,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
     /** 上一次回调的锚点矩形。 */
     private var lastLocatedAnchor: Rect? = null
 
-    /** 上一次回调的洞矩形；无洞时为 null。 */
+    /** 上一次回调的高亮区矩形；无高亮区时为 null。 */
     private var lastLocatedHole: Rect? = null
 
     /** 上一次回调的气泡矩形。 */
@@ -217,7 +217,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
     /** 锚点矩形换算到 Overlay 本地坐标后的结果。 */
     private val localAnchorRect = Rect()
 
-    /** 高亮/挖洞基准矩形（本地坐标）。 */
+    /** 高亮/高亮区基准矩形（本地坐标）。 */
     private val highlightRect = Rect()
 
     /** 气泡可用区域（本地坐标）。 */
@@ -296,8 +296,11 @@ internal class GuideOverlayView @JvmOverloads constructor(
         buildTooltip(step, session, index, total)
         installTracking(step)
 
-        // 第一帧先隐藏，等拿到有效锚点并完成定位后再淡入，避免居中闪烁。
+        // 第一帧先隐藏，等拿到有效锚点并完成定位后再播放内容动画，避免居中闪烁。
         bubble.alpha = 0f
+        bubble.scaleX = 1f
+        bubble.scaleY = 1f
+        bubble.translationY = 0f
 
         // 立即解析一次锚点。切换步骤时宿主窗口通常不会重新布局，
         // 只能依赖这一帧主动拿到矩形，否则气泡会一直停在 alpha = 0。
@@ -442,7 +445,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
         return binding.root
     }
 
-    /** 填充默认气泡布局：标题、正文、步骤指示和两个按钮。 */
+    /** 填充默认气泡布局：标题、正文、步骤指示和上一步/下一步。 */
     private fun bindDefaultContent(
         binding: ViewGuideTooltipDefaultBinding,
         content: GuideContent.Default,
@@ -453,6 +456,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
         val title = binding.guideTitle
         val message = binding.guideMessage
         val indicator = binding.guideIndicator
+        val previous = binding.guidePrevious
         val skip = binding.guideSkip
         val primary = binding.guidePrimary
 
@@ -472,6 +476,10 @@ internal class GuideOverlayView @JvmOverloads constructor(
         } else {
             indicator.visibility = GONE
         }
+
+        previous.text = context.getString(R.string.guide_previous)
+        previous.visibility = if (index > 0) VISIBLE else GONE
+        previous.setOnClickListener { session.previous() }
 
         val skipLabel = content.skipLabel
         if (skipLabel.isNullOrBlank()) {
@@ -680,6 +688,10 @@ internal class GuideOverlayView @JvmOverloads constructor(
 
         val widthSpec = step.tooltip.maxWidth
         val (maxWidth, widthModeSpec) = when (widthSpec) {
+            GuideWidth.Wrap -> {
+                (availableWidth - edge * 2).coerceAtLeast(1) to MeasureSpec.AT_MOST
+            }
+
             is GuideWidth.Fixed -> {
                 val fixed = min(
                     widthSpec.max.px(density),
@@ -728,7 +740,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
     }
 
     /**
-     * 定位气泡、挖洞和遮罩。
+     * 定位气泡、高亮区和遮罩。
      *
      * 坐标链：锚点是屏幕坐标，先减去 Overlay 窗口左上角换成 Overlay 本地坐标，
      * 再交给 [GuidePositioner] 做纯几何计算。
@@ -849,7 +861,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
     }
 
     /**
-     * 计算高亮/挖洞基准矩形（本地坐标）。
+     * 计算高亮/高亮区基准矩形（本地坐标）。
      *
      * 配置了 [GuideHighlight.holeRectProvider] 时，回调的入参和返回值都是
      * 屏幕坐标；否则使用“锚点 + padding”。
@@ -928,10 +940,15 @@ internal class GuideOverlayView @JvmOverloads constructor(
         out.set(left, top, right, bottom)
     }
 
-    /** 首次完成有效定位后再显示气泡；后续步骤切换会重新走一次淡入。 */
+    /** 首次完成有效定位后再显示气泡；后续步骤切换会重新走一次动画。 */
     private fun reveal() {
         if (positioned) return
         positioned = true
+        val animation = step?.tooltip?.animation
+        if (animation != null) {
+            animateBubble(animation)
+            return
+        }
         if (step?.highlight?.animate == true) {
             bubble.animate()
                 .alpha(1f)
@@ -943,9 +960,53 @@ internal class GuideOverlayView @JvmOverloads constructor(
         }
     }
 
+    /** 播放气泡内容入场动画。 */
+    private fun animateBubble(animation: BubbleAnimation) {
+        bubble.animate().cancel()
+        bubble.scaleX = 1f
+        bubble.scaleY = 1f
+        bubble.translationY = 0f
+        when (animation) {
+            BubbleAnimation.None -> bubble.alpha = 1f
+
+            is BubbleAnimation.Fade -> {
+                bubble.alpha = 0f
+                bubble.animate()
+                    .alpha(1f)
+                    .setDuration(animation.duration)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
+
+            is BubbleAnimation.Scale -> {
+                bubble.alpha = if (animation.fade) 0f else 1f
+                bubble.scaleX = animation.startScale
+                bubble.scaleY = animation.startScale
+                bubble.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(animation.duration)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
+
+            is BubbleAnimation.Slide -> {
+                bubble.alpha = if (animation.fade) 0f else 1f
+                bubble.translationY = animation.offset.px(density).toFloat()
+                bubble.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(animation.duration)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
+        }
+    }
+
     /**
-     * 更新目标挖洞矩形；首次有效定位时启动入场动画。
-     * 挖洞会被裁剪到 Overlay 窗口范围内。
+     * 更新目标高亮区矩形；首次有效定位时启动入场动画。
+     * 高亮区会被裁剪到 Overlay 窗口范围内。
      */
     private fun updateHole(
         step: GuideStep,
@@ -968,12 +1029,12 @@ internal class GuideOverlayView @JvmOverloads constructor(
         if (!holeAnimationStarted) {
             startHoleAnimation(step.highlight.holeAnimation)
         } else if (holeAnimator == null) {
-            // 动画已结束，洞直接跟随最新目标。
+            // 动画已结束，高亮区直接跟随最新目标。
             animatedHoleRect.set(holeRect)
         }
     }
 
-    /** 按配置启动挖洞入场动画；每个步骤只调用一次。 */
+    /** 按配置启动高亮区入场动画；每个步骤只调用一次。 */
     private fun startHoleAnimation(animation: HoleAnimation) {
         holeAnimationStarted = true
         when (animation) {
@@ -991,7 +1052,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
     }
 
     /**
-     * 从 `startScale` 缩放洞矩形到 1，并可选淡入遮罩。
+     * 从 `startScale` 缩放高亮区矩形到 1，并可选淡入遮罩。
      * 动画结束时把绘制矩形精确复原到目标值，避免浮点误差。
      */
     private fun animateHole(duration: Long, startScale: Float, fadeScrim: Boolean) {
@@ -1087,10 +1148,10 @@ internal class GuideOverlayView @JvmOverloads constructor(
     }
 
     /**
-     * 绘制遮罩：整个遮罩区域减去洞形状。
+     * 绘制遮罩：整个遮罩区域减去高亮区形状。
      *
      * 使用 [Path.Op.DIFFERENCE] 做布尔差集，不依赖路径方向和填充规则，
-     * 矩形、圆角、椭圆和自定义 Path 都能稳定挖洞。
+     * 矩形、圆角、椭圆和自定义 Path 都能稳定高亮区。
      */
     private fun drawScrim(canvas: Canvas, step: GuideStep) {
         val maskColor = step.highlight.maskColor
@@ -1126,7 +1187,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
     }
 
     /**
-     * 在洞形状上叠加高亮色。
+     * 在高亮区形状上叠加高亮色。
      *
      * 与遮罩颜色独立：即使 maskColor 完全透明，也能单独提亮目标。
      */
@@ -1144,10 +1205,10 @@ internal class GuideOverlayView @JvmOverloads constructor(
     }
 
     /**
-     * 把洞形状追加到 [holeShapePath]。
+     * 把高亮区形状追加到 [holeShapePath]。
      *
      * `hole` 是动画中的矩形；固定半径的圆形也按动画比例缩放，
-     * 避免缩放动画期间圆洞“突然出现”。
+     * 避免缩放动画期间圆高亮区“突然出现”。
      */
     private fun buildHoleShapePath(shape: HoleShape, hole: RectF) {
         when (shape) {
@@ -1241,17 +1302,18 @@ internal class GuideOverlayView @JvmOverloads constructor(
         if (max < min) (min + max) / 2f else value.coerceIn(min, max)
 
     /**
-     * 自定义箭头存在时，保证气泡与挖孔之间的间距不小于箭头长度。
+     * 保证气泡与挖孔之间的间距不小于箭头长度。
      *
-     * 否则箭头尖端会伸进挖孔区域。用户配置了更大的 margin 时保持用户值；
+     * 默认箭头按 [GuideArrow.size]，自定义箭头按 View 实测高度。否则箭头
+     * 尖端会伸进挖孔区域。用户配置了更大的 margin 时保持用户值；
      * [GuidePosition.Custom] 由调用方自行决定位置，不做调整。
      */
     private fun effectivePosition(tooltip: GuideTooltip): GuidePosition {
-        val arrow = customArrowView ?: return tooltip.position
         if (!tooltip.arrow.enabled) return tooltip.position
 
         val position = tooltip.position as? GuidePosition.Relative ?: return tooltip.position
-        val arrowLength = arrow.measuredHeight
+        val arrowLength = customArrowView?.measuredHeight
+            ?: tooltip.arrow.size.px(density)
         if (arrowLength <= 0) return position
 
         return if (position.margin.px(density) < arrowLength) {
@@ -1402,9 +1464,9 @@ internal class GuideOverlayView @JvmOverloads constructor(
     /**
      * 触摸分流：
      * 1. 气泡内：正常交给子 View（按钮可点）；
-     * 2. 洞内且开启 passThroughTargetTouch：转发给宿主 Activity；
+     * 2. 高亮区内且开启 passThroughTargetTouch：转发给宿主 Activity；
      * 3. 遮罩外且开启 passThroughOutsideMask：转发给宿主 Activity；
-     * 4. 其余区域：由引导消费，按配置判断点击外部/点击洞。
+     * 4. 其余区域：由引导消费，按配置判断点击外部/点击高亮区。
      */
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         val x = event.x
@@ -1415,7 +1477,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 val inHole = !holeRect.isEmpty && holeRect.contains(x, y)
 
-                // 洞内操作优先：自定义气泡可能覆盖洞，命中洞时仍应走穿透/下一步。
+                // 高亮区内操作优先：自定义气泡可能覆盖高亮区，命中高亮区时仍应走穿透/下一步。
                 if (step?.passThroughTargetTouch == true && inHole) {
                     passThroughActive = true
                     forwardTouchToHost(event)
@@ -1536,7 +1598,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
         return null
     }
 
-    /** 点击气泡和洞以外的区域：按配置关闭引导。 */
+    /** 点击气泡和高亮区外：按配置关闭引导。 */
     private fun handleTapOutsideTooltip() {
         if (dismissOnTouchOutside) {
             session?.dismiss()

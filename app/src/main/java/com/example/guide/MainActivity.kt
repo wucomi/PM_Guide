@@ -6,13 +6,14 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.DialogFragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.guide.databinding.ActivityMainBinding
 import com.example.guide.databinding.ViewGuideCustomDemoBinding
+import com.example.guide.databinding.ViewGuideSessionDemoBinding
 import com.pm.guide.Alignment
-import com.pm.guide.Dp
+import com.pm.guide.AnchorLostPolicy
+import com.pm.guide.BubbleAnimation
 import com.pm.guide.GuideAnchor
 import com.pm.guide.GuideArrow
 import com.pm.guide.GuideContent
@@ -27,39 +28,93 @@ import com.pm.guide.GuideTooltip
 import com.pm.guide.GuideWidth
 import com.pm.guide.HoleAnimation
 import com.pm.guide.HoleShape
+import com.pm.guide.Overflow
 import com.pm.guide.Side
 import com.pm.guide.dp
+import com.pm.guide.show
 import kotlin.math.roundToInt
 
-/**
- * PM Guide API 使用手册。
- *
- * ## 页面结构
- * - 顶部 hero 卡片播放完整三步引导；
- * - 下方 14 张能力卡片，覆盖方位、挖洞、样式、穿透、RecyclerView 等能力；
- * - 页面结构、按钮和代码片段全部声明在 `activity_main.xml`。
- *
- * ## 职责
- * - 负责按钮点击绑定、引导参数配置和 RecyclerView 初始化；
- * - 每张卡片的按钮本身就是锚点，不需要固定的“靶子”区域。
- */
+/** Demo 入口：每个 API 分组一个多步引导，点“下一步”连续看完该组所有变体。 */
 class MainActivity : AppCompatActivity() {
 
     /** 由 XML 生成的主页面绑定。 */
     private lateinit var binding: ActivityMainBinding
 
-    /** 穿透示例累计点击次数，用于证明洞内事件真的作用于底部按钮。 */
+    /** 穿透示例的点击计数。 */
     private var tapCount = 0
 
     /** showOnce 示例使用的持久化实现。 */
     private val demoStorage by lazy { DemoStorage() }
 
-    /** 所有示例共用的引导生命周期日志，写到 hero 卡片底部。 */
+    /** 自定义气泡内容：内容卡片和 6 个位置卡片共用。 */
+    private val customGuideContent by lazy {
+        GuideContent.CustomBinding(
+            create = { inflater, parent ->
+                ViewGuideCustomDemoBinding.inflate(inflater, parent, false)
+            },
+            bind = { customBinding, session ->
+                customBinding.customGuideMessage.text =
+                    "第 ${session.index + 1}/${session.steps.size} 步；上一步/下一步直接调用 GuideSession。"
+                customBinding.customGuideNext.text =
+                    if (session.index == session.steps.lastIndex) "完成" else "下一步"
+                customBinding.customGuidePrevious.setOnClickListener { session.previous() }
+                customBinding.customGuideNext.setOnClickListener { session.next() }
+            }
+        )
+    }
+
+    /** 自定义气泡箭头演示：四步都用 guide_bubble / guide_arrow 的说明。 */
+    private val customArrowGuideContent by lazy {
+        GuideContent.CustomBinding(
+            create = { inflater, parent ->
+                ViewGuideCustomDemoBinding.inflate(inflater, parent, false)
+            },
+            bind = { customBinding, session ->
+                customBinding.customGuideTitle.text = "guide_bubble / guide_arrow"
+                customBinding.customGuideMessage.text = when (session.index) {
+                    0 -> "guide_arrow：气泡在锚点上方，箭头会旋转 180° 朝下；guide_bubble 是库定位用的气泡卡片。"
+                    1 -> "guide_arrow：气泡在锚点下方，箭头 0° 朝上；guide_bubble 是库定位用的气泡卡片。"
+                    2 -> "guide_arrow：气泡在锚点左侧，箭头旋转 90°；空间不足时库按 resolvedSide 翻边。"
+                    else -> "guide_arrow：气泡在锚点右侧，箭头旋转 -90°；空间不足时库按 resolvedSide 翻边。"
+                }
+                customBinding.customGuideNext.text =
+                    if (session.index == session.steps.lastIndex) "完成" else "下一步"
+                customBinding.customGuidePrevious.setOnClickListener { session.previous() }
+                customBinding.customGuideNext.setOnClickListener { session.next() }
+            }
+        )
+    }
+
+    /** GuideSession 演示用的自定义内容。 */
+    private val sessionGuideContent by lazy {
+        GuideContent.CustomBinding(
+            create = { inflater, parent ->
+                ViewGuideSessionDemoBinding.inflate(inflater, parent, false)
+            },
+            bind = { sessionBinding, session ->
+                sessionBinding.sessionMessage.text =
+                    "当前第 ${session.index + 1}/${session.steps.size} 步"
+                sessionBinding.sessionNext.text =
+                    if (session.index == session.steps.lastIndex) "完成" else "下一步"
+                sessionBinding.sessionPrevious.setOnClickListener { session.previous() }
+                sessionBinding.sessionNext.setOnClickListener { session.next() }
+                sessionBinding.sessionGoTo.setOnClickListener { session.goTo(2) }
+                sessionBinding.sessionFinish.setOnClickListener { session.finish() }
+                sessionBinding.sessionSkip.setOnClickListener { session.skip() }
+                sessionBinding.sessionDismiss.setOnClickListener { session.dismiss() }
+            }
+        )
+    }
+
+    /** 所有示例共用的生命周期日志。 */
     private val guideListener = object : GuideListener {
+
+        /** 步骤展示后写日志。 */
         override fun onStepShown(index: Int, step: GuideStep) {
             log("onStepShown($index) · anchor=${step.anchor.javaClass.simpleName}")
         }
 
+        /** 定位完成后写日志。 */
         override fun onStepLocated(
             index: Int,
             anchorRect: Rect,
@@ -69,15 +124,13 @@ class MainActivity : AppCompatActivity() {
             log("onStepLocated($index) · anchor=$anchorRect · hole=$holeRect")
         }
 
+        /** 引导结束时写日志。 */
         override fun onGuideEnded(reason: GuideEndReason) {
             log("onGuideEnded · $reason")
         }
     }
 
-    /**
-     * 初始化页面：绑定视图、配置 RecyclerView、绑定所有示例按钮，
-     * 首帧布局完成后播放一次欢迎引导。
-     */
+    /** 初始化页面并播放一次欢迎引导。 */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -90,7 +143,7 @@ class MainActivity : AppCompatActivity() {
         binding.root.post { showWelcomeOnce() }
     }
 
-    /** 配置顶栏，并把右上角菜单的“重置引导状态”接到存储清理。 */
+    /** 配置顶栏菜单和“重置引导状态”。 */
     private fun setupToolbar() {
         binding.toolbar.inflateMenu(R.menu.menu_handbook)
         binding.toolbar.setOnMenuItemClickListener { item ->
@@ -106,228 +159,1743 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 配置 RecyclerView item 引导示例。
-     *
-     * item 操作按钮的点击只写日志；真正的引导由下面的
-     * “引导第 N 个”按钮触发，锚点使用 adapter position。
-     */
+    /** 初始化横向 RecyclerView。 */
     private fun setupRecyclerView() {
         binding.itemRecycler.layoutManager =
             LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
         binding.itemRecycler.adapter = DemoItemAdapter { position ->
             log("点击了 Item ${position + 1}")
         }
+        binding.waitRecycler.layoutManager =
+            LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
+        binding.waitRecycler.adapter = DemoItemAdapter { position ->
+            log("点击了等待列表 Item ${position + 1}")
+        }
     }
 
-    /** 把 XML 中声明的每个按钮接到对应的引导实现。 */
+    /** 按 API 分组绑定所有卡片。 */
     private fun bindSections() {
-        binding.heroStart.setOnClickListener { showHeroGuide() }
+        bindBuilderDemos()
+        bindStepDemos()
+        bindListenerDemo()
+        bindSessionDemo()
+        bindShowOnceDemo()
+        bindSideDemos()
+        bindAlignDemos()
+        bindCustomPositionDemos()
+        bindOverflowDemo()
+        bindDefaultBubbleDemo()
+        bindCustomContentDemo()
+        bindCustomContentTour()
+        bindWidthDemos()
+        bindBubbleStyleDemo()
+        bindArrowStyleDemo()
+        bindBubbleAnimationDemo()
+        bindAnchorDemos()
+        bindShapeDemos()
+        bindSizeDemos()
+        bindNoHoleDemo()
+        bindHoleGlowDemo()
+        bindAnimationDemos()
+        bindHoleClickDemo()
+        bindMaskColorDemo()
+        bindLocalMaskDemo()
+        bindRecyclerItemDemo()
+        bindWaitVisibleDemo()
+    }
 
-        binding.stepA.setOnClickListener { showStepGuide(binding.stepA, binding.stepB, binding.stepC) }
-        binding.stepB.setOnClickListener { showStepGuide(binding.stepA, binding.stepB, binding.stepC) }
-        binding.stepC.setOnClickListener { showStepGuide(binding.stepA, binding.stepB, binding.stepC) }
-        binding.stepPlay.setOnClickListener { showStepGuide(binding.stepA, binding.stepB, binding.stepC) }
+    /** 绑定 Builder / 最小示例。 */
+    private fun bindBuilderDemos() {
+        binding.heroStart.setOnClickListener { showMinimalGuide() }
+        binding.builderPlay.setOnClickListener { showBuilderGuide() }
 
-        binding.placeEnd.setOnClickListener { showPlacement(Side.END, it) }
-        binding.placeTop.setOnClickListener { showPlacement(Side.TOP, it) }
-        binding.placeBottom.setOnClickListener { showPlacement(Side.BOTTOM, it) }
-        binding.placeAuto.setOnClickListener { showPlacement(Side.AUTO, it) }
-        binding.placeStart.setOnClickListener { showPlacement(Side.START, it) }
-        binding.placeAlign.setOnClickListener {
-            showPlacement(Side.BOTTOM, it, alignMode = Alignment.END, offsetY = 12.dp)
+        binding.builderBuild.setOnClickListener {
+            val guide = GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.builderBuild,
+                        content = GuideContent.Default(
+                            title = "build() + show()",
+                            message = "builder.build() 返回 GuideDialogFragment，再手动调用 show()。"
+                        ),
+                        position = GuidePosition.above()
+                    )
+                )
+                .listener(guideListener)
+                .build()
+            guide.show(supportFragmentManager, GuideDialogFragment.TAG)
         }
 
-        binding.maskDark.setOnClickListener { showMask(it, 0xE6000000.toInt(), "深色 90%") }
-        binding.maskBlue.setOnClickListener { showMask(it, 0xCC1565C0.toInt(), "蓝色 80%") }
-        binding.maskPurple.setOnClickListener { showMask(it, 0xCC6A1B9A.toInt(), "紫色 80%") }
-        binding.maskNone.setOnClickListener { showMask(it, Color.TRANSPARENT, "无遮罩") }
-        binding.maskHoleGlow.setOnClickListener { showHoleGlow(it) }
-
-        binding.bubbleStyle.setOnClickListener { showBubbleStyle(it) }
-
-        binding.shapeRect.setOnClickListener {
-            showHoleShape(it, HoleShape.Rect, "Rect", paddingDp = 10)
-        }
-        binding.shapeRound.setOnClickListener {
-            showHoleShape(it, HoleShape.RoundRect(14.dp), "RoundRect", paddingDp = 10)
-        }
-        binding.shapeCircle.setOnClickListener {
-            showHoleShape(it, HoleShape.Circle(), "Circle", paddingDp = 10)
-        }
-        binding.shapeOval.setOnClickListener {
-            showHoleShape(it, HoleShape.Oval, "Oval", paddingDp = 10)
-        }
-        binding.shapeStar.setOnClickListener {
-            showHoleShape(it, starShape(), "Custom", paddingDp = 10)
+        binding.builderOutside.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.builderOutside,
+                        content = GuideContent.Default(
+                            title = "dismissOnTouchOutside(true)",
+                            message = "点击气泡和高亮区外会关闭引导。",
+                            showIndicator = false,
+                            skipLabel = null
+                        ),
+                        position = GuidePosition.above()
+                    )
+                )
+                .dismissOnTouchOutside(true)
+                .listener(guideListener)
+                .show(this)
         }
 
-        binding.sizeDefault.setOnClickListener { showHoleSizeDefault(it) }
-        binding.sizeLarge.setOnClickListener { showHoleSizeLarge(it) }
-        binding.sizeFixed.setOnClickListener { showHoleSizeFixed(it) }
-        binding.sizeAnchor.setOnClickListener { showHoleSizeAnchorBased(it) }
-
-        binding.animNone.setOnClickListener {
-            showHoleAnimation(it, HoleAnimation.None, "None")
+        binding.builderBackOff.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.builderBackOff,
+                        content = GuideContent.Default(
+                            title = "dismissOnBackPress(false)",
+                            message = "返回键不会关闭引导，只能点“完成”或“跳过”。",
+                            showIndicator = false,
+                            skipLabel = null
+                        ),
+                        position = GuidePosition.above()
+                    )
+                )
+                .dismissOnBackPress(false)
+                .listener(guideListener)
+                .show(this)
         }
-        binding.animScale.setOnClickListener {
-            showHoleAnimation(
-                it,
-                HoleAnimation.Scale(duration = 420L, startScale = 0.2f, fadeScrim = true),
-                "Scale"
+    }
+
+    /** Builder 卡片内的三步引导，锚点都在本卡片内，避免滚出屏幕。 */
+    private fun showBuilderGuide() {
+        GuideDialogFragment.builder(this)
+            .addStep(
+                GuideStep(
+                    view = binding.builderChipA,
+                    content = GuideContent.Default(
+                        title = "第 1 步",
+                        message = "builder 添加步骤，默认气泡自带“下一步/完成”。"
+                    ),
+                    position = GuidePosition.below()
+                )
             )
-        }
-        binding.animFade.setOnClickListener {
-            showHoleAnimation(it, HoleAnimation.Fade(420L), "Fade")
+            .addStep(
+                GuideStep(
+                    view = binding.builderChipB,
+                    content = GuideContent.Default(
+                        title = "第 2 步",
+                        message = "点击“下一步”会重新解析锚点并重新定位。"
+                    ),
+                    position = GuidePosition.below()
+                )
+            )
+            .addStep(
+                GuideStep(
+                    view = binding.builderChipC,
+                    content = GuideContent.Default(
+                        title = "第 3 步",
+                        message = "最后一步调用 session.finish()。",
+                        finishLabel = "完成"
+                    ),
+                    position = GuidePosition.below()
+                )
+            )
+            .listener(guideListener)
+            .show(supportFragmentManager)
+    }
+
+    /** 最小示例：三步引导，默认“下一步/完成”按钮。 */
+    private fun showMinimalGuide() {
+        GuideDialogFragment.builder(this)
+            .addStep(
+                GuideStep(
+                    view = binding.heroTitle,
+                    content = GuideContent.Default(
+                        title = "第 1 步 · 标题锚点",
+                        message = "默认气泡自带“下一步/完成”，点“下一步”会重新解析锚点。"
+                    ),
+                    position = GuidePosition.below()
+                )
+            )
+            .addStep(
+                GuideStep(
+                    view = binding.heroSubtitle,
+                    content = GuideContent.Default(
+                        title = "第 2 步 · 说明锚点",
+                        message = "这就是最基本的步骤切换：不需要页面上的按钮，直接点气泡里的“下一步”。"
+                    ),
+                    position = GuidePosition.below()
+                )
+            )
+            .addStep(
+                GuideStep(
+                    view = binding.heroStart,
+                    content = GuideContent.Default(
+                        title = "第 3 步 · 按钮锚点",
+                        message = "最后一步的主按钮会调用 session.finish()。",
+                        finishLabel = "完成"
+                    ),
+                    position = GuidePosition.above()
+                )
+            )
+            .listener(guideListener)
+            .show(supportFragmentManager)
+    }
+
+    /** 绑定 GuideStep 字段和锚点失效策略。 */
+    private fun bindStepDemos() {
+        binding.stepTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.stepChipA,
+                        content = GuideContent.Default(
+                            title = "GuideStep · 默认字段",
+                            message = "anchor + tooltip + highlight 是最小组合；不传 highlight 时使用默认圆角高亮区。"
+                        ),
+                        position = GuidePosition.above()
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.stepChipB,
+                        content = GuideContent.Default(
+                            title = "followAnchor = false",
+                            message = "只在步骤展示时定位一次，适合锚点位置固定的页面。"
+                        ),
+                        position = GuidePosition.above()
+                    ).copy(followAnchor = false)
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.stepChipA),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "onShown 回调",
+                                message = "定位完成后会执行 onShown，可以把日志或统计写在这里。"
+                            ),
+                            position = GuidePosition.above()
+                        ),
+                        onShown = { log("GuideStep.onShown") }
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.stepChipB,
+                        content = GuideContent.Default(
+                            title = "自定义 highlight",
+                            message = "highlight 可以覆盖形状、padding、遮罩和动画。",
+                            finishLabel = "完成"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(6.dp),
+                            padding = 2.dp
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
         }
 
-        binding.passCounter.setOnClickListener {
-            if (supportFragmentManager.findFragmentByTag(GuideDialogFragment.TAG) == null) {
-                showPassThrough(binding.passCounter)
-            } else {
-                // 引导打开时，洞内的点击会被转发到这里
-                tapCount++
-                binding.passCounter.text = getString(R.string.demo_counter_value, tapCount)
-                log("穿透点击 +1 · 总计 $tapCount")
+        binding.lostDismiss.setOnClickListener { showLostPolicy(AnchorLostPolicy.DISMISS) }
+        binding.lostSkip.setOnClickListener { showLostPolicy(AnchorLostPolicy.SKIP_NEXT) }
+        binding.lostKeep.setOnClickListener { showLostPolicy(AnchorLostPolicy.KEEP) }
+    }
+
+    /** 锚点失效策略演示：500ms 后隐藏第一个锚点。 */
+    private fun showLostPolicy(policy: AnchorLostPolicy) {
+        val lostListener = object : GuideListener {
+
+            /** 转发步骤回调。 */
+            override fun onStepShown(index: Int, step: GuideStep) {
+                guideListener.onStepShown(index, step)
+            }
+
+            /** 转发定位回调。 */
+            override fun onStepLocated(
+                index: Int,
+                anchorRect: Rect,
+                holeRect: Rect?,
+                tooltipRect: Rect
+            ) {
+                guideListener.onStepLocated(index, anchorRect, holeRect, tooltipRect)
+            }
+
+            /** 引导结束后恢复被隐藏的锚点。 */
+            override fun onGuideEnded(reason: GuideEndReason) {
+                binding.lostTarget.visibility = View.VISIBLE
+                guideListener.onGuideEnded(reason)
             }
         }
-        binding.passAdvance.setOnClickListener { showAdvanceOnTargetClick(it) }
 
-        binding.localMask.setOnClickListener { showLocalMask(it) }
+        val builder = GuideDialogFragment.builder(this)
+            .addStep(
+                GuideStep(
+                    anchor = GuideAnchor.ViewAnchor(binding.lostTarget),
+                    tooltip = GuideTooltip(
+                        content = GuideContent.Default(
+                            title = "anchorLostPolicy.$policy",
+                            message = when (policy) {
+                                AnchorLostPolicy.DISMISS -> "锚点消失后立即结束引导。"
+                                AnchorLostPolicy.SKIP_NEXT -> "锚点消失后自动跳到下一步。"
+                                AnchorLostPolicy.KEEP -> "锚点消失后保持最后一次位置。"
+                            }
+                        ),
+                        position = GuidePosition.above()
+                    ),
+                    anchorLostPolicy = policy
+                )
+            )
 
-        binding.customA.setOnClickListener { showCustomContent(binding.customA, binding.customB) }
-        binding.customB.setOnClickListener { showCustomContent(binding.customA, binding.customB) }
+        if (policy == AnchorLostPolicy.SKIP_NEXT) {
+            builder.addStep(
+                GuideStep(
+                    view = binding.lostNext,
+                    content = GuideContent.Default(
+                        title = "已自动跳到下一步",
+                        message = "第一个锚点消失后，SKIP_NEXT 直接前进到这里。",
+                        finishLabel = "完成"
+                    ),
+                    position = GuidePosition.above()
+                )
+            )
+        }
 
-        binding.customPosition.setOnClickListener { showCustomPosition(it) }
-        binding.fillScreenWidth.setOnClickListener { showFillScreenWidth(it) }
-        binding.fillMaskWidth.setOnClickListener { showFillMaskWidth(it) }
-        binding.rectAnchor.setOnClickListener { showRectAnchor(it) }
+        binding.lostTarget.visibility = View.VISIBLE
+        binding.lostTarget.postDelayed({
+            if (supportFragmentManager.findFragmentByTag(GuideDialogFragment.TAG) != null) {
+                binding.lostTarget.visibility = View.GONE
+            }
+        }, 500L)
 
-        binding.showOnce.setOnClickListener { showOnceDemo(it) }
+        builder.listener(lostListener).show(supportFragmentManager)
+    }
+
+    /** 气泡内容动画。 */
+    private fun bindBubbleAnimationDemo() {
+        binding.bubbleAnimTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.bubbleAnimFade),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "BubbleAnimation.Fade",
+                                message = "气泡内容从透明淡入。"
+                            ),
+                            position = GuidePosition.above(),
+                            animation = BubbleAnimation.Fade(duration = 400L)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.bubbleAnimScale),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "BubbleAnimation.Scale",
+                                message = "气泡内容从 startScale 缩放到 1。"
+                            ),
+                            position = GuidePosition.above(),
+                            animation = BubbleAnimation.Scale(
+                                duration = 420L,
+                                startScale = 0.85f
+                            )
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.bubbleAnimSlide),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "BubbleAnimation.Slide",
+                                message = "气泡内容从下方 offset 滑入。",
+                                finishLabel = "完成"
+                            ),
+                            position = GuidePosition.above(),
+                            animation = BubbleAnimation.Slide(
+                                duration = 420L,
+                                offset = 16.dp
+                            )
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 绑定 GuideAnchor：View 与 Rect。 */
+    private fun bindAnchorDemos() {
+        binding.anchorTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.anchorChipView,
+                        content = GuideContent.Default(
+                            title = "GuideAnchor.ViewAnchor",
+                            message = "直接持有 View，适合页面内生命周期稳定的控件。"
+                        ),
+                        position = GuidePosition.above()
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.RectAnchor {
+                            val location = IntArray(2)
+                            binding.anchorChipRect.getLocationOnScreen(location)
+                            Rect(
+                                location[0] - dp(8),
+                                location[1] - dp(8),
+                                location[0] + binding.anchorChipRect.width + dp(8),
+                                location[1] + binding.anchorChipRect.height + dp(8)
+                            )
+                        },
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "GuideAnchor.RectAnchor",
+                                message = "用屏幕矩形定位，不依赖 View；followAnchor = false 只定位一次。",
+                                finishLabel = "完成"
+                            ),
+                            position = GuidePosition.above()
+                        ),
+                        followAnchor = false
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 绑定 GuidePosition.Relative 的全部方位。 */
+    private fun bindSideDemos() {
+        binding.sideTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.sideChipTop),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Side.TOP",
+                                message = "气泡在锚点上方，margin 从高亮外框起算。"
+                            ),
+                            position = GuidePosition.Relative(side = Side.TOP),
+                            maxWidth = GuideWidth.Fixed(220.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.sideChipBottom),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Side.BOTTOM",
+                                message = "气泡在锚点下方，空间不足时会按 overflow 翻边。"
+                            ),
+                            position = GuidePosition.Relative(side = Side.BOTTOM),
+                            maxWidth = GuideWidth.Fixed(220.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.sideChipStart),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Side.START",
+                                message = "气泡在锚点左侧；左侧空间不足或 RTL 时会按 Overflow 翻到右侧。"
+                            ),
+                            position = GuidePosition.Relative(side = Side.START),
+                            maxWidth = GuideWidth.Fixed(220.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.sideChipEnd),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Side.END",
+                                message = "气泡在锚点右侧；右侧空间不足或 RTL 时会按 Overflow 翻到左侧。"
+                            ),
+                            position = GuidePosition.Relative(side = Side.END),
+                            maxWidth = GuideWidth.Fixed(220.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.sideChipAuto),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Side.AUTO",
+                                message = "按 autoOrder 依次尝试 TOP、BOTTOM、END、START。",
+                                finishLabel = "完成"
+                            ),
+                            position = GuidePosition.Relative(
+                                side = Side.AUTO,
+                                autoOrder = listOf(Side.TOP, Side.BOTTOM, Side.END, Side.START)
+                            ),
+                            maxWidth = GuideWidth.Fixed(220.dp)
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 绑定 GuidePosition.Relative 的对齐、间距和偏移。 */
+    private fun bindAlignDemos() {
+        binding.alignTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.alignChipStart),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Alignment.START",
+                                message = "气泡与锚点在共享边的起始位置对齐。",
+                                showIndicator = false
+                            ),
+                            position = GuidePosition.Relative(
+                                side = Side.TOP,
+                                align = Alignment.START
+                            ),
+                            maxWidth = GuideWidth.Fixed(200.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.alignChipCenter),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Alignment.CENTER",
+                                message = "气泡与锚点居中对齐，也是默认值。",
+                                showIndicator = false
+                            ),
+                            position = GuidePosition.Relative(
+                                side = Side.TOP,
+                                align = Alignment.CENTER
+                            ),
+                            maxWidth = GuideWidth.Fixed(200.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.alignChipEnd),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Alignment.END",
+                                message = "气泡与锚点在共享边的结束位置对齐。",
+                                showIndicator = false
+                            ),
+                            position = GuidePosition.Relative(
+                                side = Side.TOP,
+                                align = Alignment.END
+                            ),
+                            maxWidth = GuideWidth.Fixed(200.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.offsetChip),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "offsetX / offsetY",
+                                message = "在选边和对齐之后追加偏移：offsetX = 24dp，offsetY = 12dp。",
+                                showIndicator = false
+                            ),
+                            position = GuidePosition.Relative(
+                                side = Side.BOTTOM,
+                                offsetX = 24.dp,
+                                offsetY = 12.dp
+                            ),
+                            maxWidth = GuideWidth.Fixed(200.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.marginChip),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "margin = 24dp",
+                                message = "margin 是气泡到高亮外框的距离，默认 8dp。",
+                                showIndicator = false,
+                                finishLabel = "完成"
+                            ),
+                            position = GuidePosition.Relative(
+                                side = Side.TOP,
+                                margin = 24.dp
+                            ),
+                            maxWidth = GuideWidth.Fixed(200.dp)
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 绑定 GuidePosition.Custom 的默认气泡位置。 */
+    private fun bindCustomPositionDemos() {
+        binding.customPosTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.posChipBottom),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "底部居中",
+                                message = "GuidePosition.Custom 直接返回气泡矩形，这里固定在可用区域底部。"
+                            ),
+                            position = GuidePosition.Custom { _, size, available ->
+                                val left = available.centerX() - size.width / 2
+                                val top = available.bottom - size.height - dp(24)
+                                Rect(left, top, left + size.width, top + size.height)
+                            },
+                            arrow = GuideArrow(enabled = false),
+                            maxWidth = GuideWidth.Fixed(300.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.posChipTop),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "顶部居中",
+                                message = "同一个 provider，换成 available.top 即可。"
+                            ),
+                            position = GuidePosition.Custom { _, size, available ->
+                                val left = available.centerX() - size.width / 2
+                                val top = available.top + dp(24)
+                                Rect(left, top, left + size.width, top + size.height)
+                            },
+                            arrow = GuideArrow(enabled = false),
+                            maxWidth = GuideWidth.Fixed(300.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.posChipCenter),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "屏幕中央",
+                                message = "provider 的参数是 anchorRect、tooltipSize、availableRect。",
+                                finishLabel = "完成"
+                            ),
+                            position = GuidePosition.Custom { _, size, available ->
+                                val left = available.centerX() - size.width / 2
+                                val top = available.centerY() - size.height / 2
+                                Rect(left, top, left + size.width, top + size.height)
+                            },
+                            arrow = GuideArrow(enabled = false),
+                            maxWidth = GuideWidth.Fixed(300.dp)
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 绑定 GuideTooltip.overflow 的四种策略。 */
+    private fun bindOverflowDemo() {
+        binding.overflowChip.setOnClickListener {
+            binding.overflowFlipThenClamp.performClick()
+        }
+
+        binding.overflowFlipThenClamp.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.overflowChip),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Overflow.FLIP_THEN_CLAMP",
+                                message = "BOTTOM 放不下，先翻到上方；上方也不够时夹回可用区域。",
+                                showIndicator = false,
+                                skipLabel = null
+                            ),
+                            position = GuidePosition.Relative(side = Side.BOTTOM),
+                            overflow = Overflow.FLIP_THEN_CLAMP
+                        ),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 4.dp
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+
+        binding.overflowFlip.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.overflowChip),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Overflow.FLIP",
+                                message = "只翻到上方，仍放不下时允许溢出可用区域。",
+                                showIndicator = false,
+                                skipLabel = null
+                            ),
+                            position = GuidePosition.Relative(side = Side.BOTTOM),
+                            overflow = Overflow.FLIP
+                        ),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 4.dp
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+
+        binding.overflowClamp.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.overflowChip),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Overflow.CLAMP",
+                                message = "不翻边，直接把气泡平移回可用区域。",
+                                showIndicator = false,
+                                skipLabel = null
+                            ),
+                            position = GuidePosition.Relative(side = Side.BOTTOM),
+                            overflow = Overflow.CLAMP
+                        ),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 4.dp
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+
+        binding.overflowNone.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.overflowChip),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "Overflow.NONE",
+                                message = "不做任何约束；放不下时允许溢出可用区域，一般只用于调试。",
+                                showIndicator = false,
+                                skipLabel = null
+                            ),
+                            position = GuidePosition.Relative(side = Side.BOTTOM),
+                            overflow = Overflow.NONE
+                        ),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 4.dp
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 绑定 GuideWidth 和 edgePadding。 */
+    private fun bindWidthDemos() {
+        binding.widthTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.widthChipWrap),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "GuideWidth.Wrap",
+                                message = "默认模式：短内容保持内容宽度；这段文字比较长，气泡会在可用宽度内自动换行，不会像 Fixed(320dp) 那样被卡住。"
+                            ),
+                            position = GuidePosition.below(),
+                            maxWidth = GuideWidth.Wrap
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.widthChipFixed),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "GuideWidth.Fixed(240.dp)",
+                                message = "固定最大宽度；内容更窄时气泡仍会收缩到内容宽度。"
+                            ),
+                            position = GuidePosition.below(),
+                            maxWidth = GuideWidth.Fixed(240.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.widthChipScreen),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "GuideWidth.FillScreen",
+                                message = "气泡宽度 = 可用屏幕宽度 - 两侧 edgePadding（默认 16dp）。"
+                            ),
+                            position = GuidePosition.below(),
+                            maxWidth = GuideWidth.FillScreen
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.widthChipMask),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "GuideWidth.FillMask",
+                                message = "气泡宽度 = 遮罩宽度 - 两侧 edgePadding；遮罩由 maskRectProvider 缩小。",
+                                showIndicator = false
+                            ),
+                            position = GuidePosition.below(),
+                            maxWidth = GuideWidth.FillMask
+                        ),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(10.dp),
+                            padding = 6.dp,
+                            maskRectProvider = { _, anchorRect ->
+                                Rect(
+                                    anchorRect.left - dp(160),
+                                    anchorRect.top - dp(120),
+                                    anchorRect.right + dp(160),
+                                    anchorRect.bottom + dp(120)
+                                )
+                            }
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.widthChipPadding),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "edgePadding = 32dp",
+                                message = "FillScreen 会按 32dp 的两侧留白重新计算宽度。",
+                                finishLabel = "完成"
+                            ),
+                            position = GuidePosition.below(),
+                            maxWidth = GuideWidth.FillScreen,
+                            edgePadding = 32.dp
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 气泡样式：背景、圆角、描边和文字颜色。 */
+    private fun bindBubbleStyleDemo() {
+        binding.styleTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.styleChipLight),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "浅色气泡",
+                                message = "backgroundColor / cornerRadius / strokeColor / strokeWidth 控制气泡外观。",
+                                titleColor = 0xFF4E342E.toInt(),
+                                messageColor = 0xFF6D4C41.toInt()
+                            ),
+                            position = GuidePosition.below(),
+                            backgroundColor = 0xFFFFF8E1.toInt(),
+                            cornerRadius = 22.dp,
+                            strokeColor = 0xFFFFB300.toInt(),
+                            strokeWidth = 2.dp
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.styleChipDark),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "深色气泡",
+                                message = "深色背景时用 titleColor / messageColor 覆盖文字颜色。",
+                                titleColor = 0xFFFFFFFF.toInt(),
+                                messageColor = 0xFFCFD8DC.toInt(),
+                                finishLabel = "完成"
+                            ),
+                            position = GuidePosition.below(),
+                            backgroundColor = 0xFF263238.toInt(),
+                            cornerRadius = 18.dp,
+                            strokeColor = 0xFF546E7A.toInt(),
+                            strokeWidth = 1.dp
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 箭头样式：size / edgeInset / enabled。 */
+    private fun bindArrowStyleDemo() {
+        binding.arrowTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.arrowStyleLarge),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "GuideArrow.size = 14dp",
+                                message = "size 控制箭头伸出长度，edgeInset 控制距圆角的最小距离。"
+                            ),
+                            position = GuidePosition.above(),
+                            arrow = GuideArrow(size = 14.dp, edgeInset = 18.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.arrowStyleNone),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "GuideArrow(enabled = false)",
+                                message = "关闭箭头后，气泡与锚点之间只保留 margin。",
+                                finishLabel = "完成"
+                            ),
+                            position = GuidePosition.above(),
+                            arrow = GuideArrow(enabled = false)
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 默认气泡 GuideContent.Default。 */
+    private fun bindDefaultBubbleDemo() {
+        binding.defaultTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.defaultChipA,
+                        content = GuideContent.Default(
+                            title = "Default · 第 1 步",
+                            message = "title / message / primaryLabel / finishLabel / skipLabel / showIndicator 都是 GuideContent.Default 的字段。",
+                            skipLabel = "跳过"
+                        ),
+                        position = GuidePosition.below()
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.defaultChipB,
+                        content = GuideContent.Default(
+                            title = "Default · 第 2 步",
+                            message = "titleColor / messageColor 可以覆盖默认文字颜色。",
+                            showIndicator = false,
+                            finishLabel = "完成"
+                        ),
+                        position = GuidePosition.below()
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 自定义气泡内容：Custom 和 CustomBinding。 */
+    private fun bindCustomContentDemo() {
+        binding.customContentTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.customContentChipA),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Custom(R.layout.view_guide_custom_demo) { view, session ->
+                                view.findViewById<View>(R.id.custom_guide_previous)
+                                    .setOnClickListener { session.previous() }
+                                view.findViewById<View>(R.id.custom_guide_next)
+                                    .setOnClickListener { session.next() }
+                            },
+                            position = GuidePosition.above()
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.customContentChipB),
+                        tooltip = GuideTooltip(
+                            content = customGuideContent,
+                            position = GuidePosition.above()
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 自定义气泡：guide_bubble / guide_arrow 说明 + 上下左右箭头。 */
+    private fun bindCustomContentTour() {
+        binding.customIdTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.arrowChipTop),
+                        tooltip = GuideTooltip(
+                            content = customArrowGuideContent,
+                            position = GuidePosition.above()
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.arrowChipBottom),
+                        tooltip = GuideTooltip(
+                            content = customArrowGuideContent,
+                            position = GuidePosition.below()
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.arrowChipStart),
+                        tooltip = GuideTooltip(
+                            content = customArrowGuideContent,
+                            position = GuidePosition.startOf(),
+                            maxWidth = GuideWidth.Fixed(200.dp)
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.arrowChipEnd),
+                        tooltip = GuideTooltip(
+                            content = customArrowGuideContent,
+                            position = GuidePosition.endOf(),
+                            maxWidth = GuideWidth.Fixed(200.dp)
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 生命周期回调与结束原因。 */
+    private fun bindListenerDemo() {
+        val listener = object : GuideListener {
+            override fun onStepShown(index: Int, step: GuideStep) {
+                guideListener.onStepShown(index, step)
+            }
+
+            override fun onStepLocated(
+                index: Int,
+                anchorRect: Rect,
+                holeRect: Rect?,
+                tooltipRect: Rect
+            ) {
+                guideListener.onStepLocated(index, anchorRect, holeRect, tooltipRect)
+            }
+
+            override fun onGuideEnded(reason: GuideEndReason) {
+                binding.listenerChip.visibility = View.VISIBLE
+                guideListener.onGuideEnded(reason)
+            }
+        }
+
+        binding.listenerStart.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.listenerChip,
+                        content = GuideContent.Default(
+                            title = "onStepShown / onStepLocated",
+                            message = "步骤切换和定位变化会分别触发这两个回调；日志在 hero 底部。",
+                            skipLabel = "跳过"
+                        ),
+                        position = GuidePosition.below()
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.listenerChip,
+                        content = GuideContent.Default(
+                            title = "onGuideEnded",
+                            message = "完成、跳过、返回关闭都会回调 onGuideEnded，reason 不同。",
+                            finishLabel = "完成"
+                        ),
+                        position = GuidePosition.below()
+                    )
+                )
+                .listener(listener)
+                .show(supportFragmentManager)
+        }
+
+        binding.listenerLost.setOnClickListener {
+            binding.listenerChip.visibility = View.VISIBLE
+            binding.listenerChip.postDelayed({
+                if (supportFragmentManager.findFragmentByTag(GuideDialogFragment.TAG) != null) {
+                    binding.listenerChip.visibility = View.GONE
+                }
+            }, 500L)
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.listenerChip),
+                        tooltip = GuideTooltip(
+                            content = GuideContent.Default(
+                                title = "ANCHOR_LOST",
+                                message = "锚点 500ms 后隐藏；anchorLostPolicy = DISMISS 会结束引导。",
+                                showIndicator = false,
+                                skipLabel = null
+                            ),
+                            position = GuidePosition.below()
+                        ),
+                        anchorLostPolicy = AnchorLostPolicy.DISMISS
+                    )
+                )
+                .listener(listener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** GuideSession 全部方法：next / previous / goTo / finish / skip / dismiss。 */
+    private fun bindSessionDemo() {
+        binding.sessionPlay.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.sessionChipA),
+                        tooltip = GuideTooltip(
+                            content = sessionGuideContent,
+                            position = GuidePosition.above()
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.sessionChipB),
+                        tooltip = GuideTooltip(
+                            content = sessionGuideContent,
+                            position = GuidePosition.above()
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.ViewAnchor(binding.sessionChipC),
+                        tooltip = GuideTooltip(
+                            content = sessionGuideContent,
+                            position = GuidePosition.above()
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 绑定 HoleShape 的全部形状。 */
+    private fun bindShapeDemos() {
+        binding.shapeTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.shapeRect,
+                        content = GuideContent.Default(
+                            title = "HoleShape.Rect",
+                            message = "高亮区是贴合锚点的直角矩形。"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.Rect,
+                            padding = 10.dp
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.shapeRound,
+                        content = GuideContent.Default(
+                            title = "HoleShape.RoundRect(14.dp)",
+                            message = "圆角半径超过短边一半时按短边内切处理。"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(14.dp),
+                            padding = 10.dp
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.shapeCircle,
+                        content = GuideContent.Default(
+                            title = "HoleShape.Circle()",
+                            message = "radius 为 null 时取高亮区矩形的内切圆；也可以传 Circle(16.dp)。"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.Circle(),
+                            padding = 10.dp
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.shapeOval,
+                        content = GuideContent.Default(
+                            title = "HoleShape.Oval",
+                            message = "椭圆始终填满整个高亮区矩形。"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.Oval,
+                            padding = 10.dp
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.shapeStar,
+                        content = GuideContent.Default(
+                            title = "HoleShape.Custom",
+                            message = "回调只需要把五角星路径追加到 path 上。",
+                            finishLabel = "完成"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.Custom { rect, path ->
+                                buildStarPath(rect, path)
+                            },
+                            padding = 10.dp
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 绑定 GuideHighlight 的 padding / holeRectProvider。 */
+    private fun bindSizeDemos() {
+        binding.sizeTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.sizeChipDefault,
+                        content = GuideContent.Default(
+                            title = "默认大小",
+                            message = "高亮区 = 锚点矩形 + 四周 padding。"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 4.dp
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.sizeChipLarge,
+                        content = GuideContent.Default(
+                            title = "放大 22dp",
+                            message = "padding 同时是气泡定位的起算距离。"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(18.dp),
+                            padding = 22.dp
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.sizeChipFixed,
+                        content = GuideContent.Default(
+                            title = "固定 180×88dp",
+                            message = "holeRectProvider 忽略锚点尺寸，只按中心对齐。"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(20.dp),
+                            holeRectProvider = { anchorRect ->
+                                Rect(
+                                    anchorRect.centerX() - dp(90),
+                                    anchorRect.centerY() - dp(44),
+                                    anchorRect.centerX() + dp(90),
+                                    anchorRect.centerY() + dp(44)
+                                )
+                            }
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.sizeChipAnchor,
+                        content = GuideContent.Default(
+                            title = "锚点 + 最小尺寸",
+                            message = "读取回调里的 anchor，保证高亮区至少 160×72dp。",
+                            finishLabel = "完成"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(16.dp),
+                            holeRectProvider = { anchorRect ->
+                                val width = maxOf(anchorRect.width(), dp(160))
+                                val height = maxOf(anchorRect.height(), dp(72))
+                                Rect(
+                                    anchorRect.centerX() - width / 2,
+                                    anchorRect.centerY() - height / 2,
+                                    anchorRect.centerX() + width / 2,
+                                    anchorRect.centerY() + height / 2
+                                )
+                            }
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 遮罩颜色。 */
+    private fun bindMaskColorDemo() {
+        binding.maskColorTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.maskChipDark,
+                        content = GuideContent.Default(
+                            title = "深色遮罩",
+                            message = "maskColor = 0xE6000000。"
+                        ),
+                        position = GuidePosition.below(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 8.dp,
+                            maskColor = 0xE6000000.toInt()
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.maskChipBlue,
+                        content = GuideContent.Default(
+                            title = "蓝色遮罩",
+                            message = "maskColor = 0xCC1565C0。"
+                        ),
+                        position = GuidePosition.below(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 8.dp,
+                            maskColor = 0xCC1565C0.toInt()
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.maskChipPurple,
+                        content = GuideContent.Default(
+                            title = "紫色遮罩",
+                            message = "maskColor = 0xCC6A1B9A。"
+                        ),
+                        position = GuidePosition.below(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 8.dp,
+                            maskColor = 0xCC6A1B9A.toInt()
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.maskChipNone,
+                        content = GuideContent.Default(
+                            title = "无遮罩",
+                            message = "maskColor 的 alpha 为 0 时不绘制遮罩。",
+                            finishLabel = "完成"
+                        ),
+                        position = GuidePosition.below(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 8.dp,
+                            maskColor = Color.TRANSPARENT
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 无高亮区，只压暗。 */
+    private fun bindNoHoleDemo() {
+        binding.noHoleStart.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.noHoleChip,
+                        content = GuideContent.Default(
+                            title = "shape = null",
+                            message = "无高亮区，只绘制整层遮罩；maskColor 仍然生效。",
+                            showIndicator = false,
+                            skipLabel = null,
+                            finishLabel = "完成"
+                        ),
+                        position = GuidePosition.below(),
+                        highlight = GuideHighlight(
+                            shape = null,
+                            maskColor = 0xB3000000.toInt()
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 高亮区提亮。 */
+    private fun bindHoleGlowDemo() {
+        binding.holeGlowStart.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.holeGlowChip,
+                        content = GuideContent.Default(
+                            title = "holeOverlayColor",
+                            message = "在高亮区形状上单独叠加半透明白色，和 maskColor 独立。",
+                            showIndicator = false,
+                            skipLabel = null,
+                            finishLabel = "完成"
+                        ),
+                        position = GuidePosition.below(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 8.dp,
+                            holeOverlayColor = 0x33FFFFFF
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 绑定 HoleAnimation 的三种动画。 */
+    private fun bindAnimationDemos() {
+        binding.animTour.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.animChipNone,
+                        content = GuideContent.Default(
+                            title = "HoleAnimation.None + animate = false",
+                            message = "不做高亮区动画，同时关闭气泡淡入，直接显示最终状态。"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(14.dp),
+                            padding = 12.dp,
+                            holeAnimation = HoleAnimation.None,
+                            animate = false
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.animChipScale,
+                        content = GuideContent.Default(
+                            title = "HoleAnimation.Scale",
+                            message = "以高亮区中心从 0.2 缩放到 1，并让遮罩一起淡入。"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(14.dp),
+                            padding = 12.dp,
+                            holeAnimation = HoleAnimation.Scale(
+                                duration = 420L,
+                                startScale = 0.2f,
+                                fadeScrim = true
+                            )
+                        )
+                    )
+                )
+                .addStep(
+                    GuideStep(
+                        view = binding.animChipFade,
+                        content = GuideContent.Default(
+                            title = "HoleAnimation.Fade",
+                            message = "只淡入遮罩，高亮区的大小保持不变。",
+                            finishLabel = "完成"
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(14.dp),
+                            padding = 12.dp,
+                            holeAnimation = HoleAnimation.Fade(420L)
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 高亮区点击：穿透和点击高亮区前进。 */
+    private fun bindHoleClickDemo() {
+        binding.holeClickPass.setOnClickListener {
+            if (supportFragmentManager.findFragmentByTag(GuideDialogFragment.TAG) == null) {
+                GuideDialogFragment.builder(this)
+                    .addStep(
+                        GuideStep(
+                            view = binding.holeClickPass,
+                            content = GuideContent.Default(
+                                title = "passThroughTargetTouch",
+                                message = "高亮区内触摸会转发给 Activity；直接点计数按钮，引导不会关闭。",
+                                showIndicator = false,
+                                skipLabel = null
+                            ),
+                            position = GuidePosition.above(),
+                            highlight = GuideHighlight(
+                                shape = HoleShape.RoundRect(12.dp),
+                                padding = 10.dp
+                            )
+                        ).copy(passThroughTargetTouch = true)
+                    )
+                    .listener(guideListener)
+                    .show(supportFragmentManager)
+            } else {
+                tapCount++
+                binding.holeClickPass.text = getString(R.string.demo_counter_value, tapCount)
+                log("高亮区点击 +1 · 总计 $tapCount")
+            }
+        }
+
+        binding.holeClickAdvance.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.holeClickAdvance,
+                        content = GuideContent.Default(
+                            title = "advanceOnTargetClick",
+                            message = "点击高亮区只调用 session.next()，不执行按钮自身逻辑。",
+                            showIndicator = false,
+                            skipLabel = null
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 10.dp
+                        )
+                    ).copy(advanceOnTargetClick = true)
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 局部遮罩 + 遮罩外穿透。 */
+    private fun bindLocalMaskDemo() {
+        binding.localMaskStart.setOnClickListener {
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        view = binding.localMaskChip,
+                        content = GuideContent.Default(
+                            title = "局部遮罩 + 遮罩外穿透",
+                            message = "maskRectProvider 缩小遮罩范围；passThroughOutsideMask 放行范围外触摸，弹引导后仍可滚动列表。",
+                            showIndicator = false,
+                            skipLabel = null
+                        ),
+                        position = GuidePosition.below(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 8.dp,
+                            maskRectProvider = { _, anchorRect ->
+                                val padX = dp(80)
+                                val padY = dp(100)
+                                Rect(
+                                    anchorRect.left - padX,
+                                    anchorRect.top - padY,
+                                    anchorRect.right + padX,
+                                    anchorRect.bottom + padY
+                                )
+                            }
+                        )
+                    ).copy(passThroughOutsideMask = true)
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** RecyclerView item 定位。 */
+    private fun bindRecyclerItemDemo() {
+        binding.recyclerTour.setOnClickListener {
+            binding.itemStatus.text = "准备定位 Item 1 / 3 / 8…"
+            binding.itemRecycler.scrollToPosition(0)
+            binding.itemRecycler.post {
+                GuideDialogFragment.builder(this)
+                    .addStep(
+                        GuideStep(
+                            anchor = GuideAnchor.RecyclerViewItemAnchor(
+                                recyclerView = binding.itemRecycler,
+                                position = 0,
+                                childId = R.id.itemAction,
+                                scrollToItem = false
+                            ),
+                            tooltip = GuideTooltip(
+                                content = GuideContent.Default(
+                                    title = "Item 1 · 已可见",
+                                    message = "scrollToItem = false，item 已经可见时直接解析锚点。"
+                                ),
+                                position = GuidePosition.above()
+                            ),
+                            highlight = GuideHighlight(
+                                shape = HoleShape.RoundRect(12.dp),
+                                padding = 8.dp
+                            ),
+                            onShown = {
+                                binding.itemStatus.text = "Item 1 已可见：scrollToItem = false"
+                            }
+                        )
+                    )
+                    .addStep(
+                        GuideStep(
+                            anchor = GuideAnchor.RecyclerViewItemAnchor(
+                                recyclerView = binding.itemRecycler,
+                                position = 2,
+                                childId = R.id.itemAction
+                            ),
+                            tooltip = GuideTooltip(
+                                content = GuideContent.Default(
+                                    title = "Item 3 · 自动滚动",
+                                    message = "目标不在屏幕内时发起 scrollToPosition，并等待列表布局完成。"
+                                ),
+                                position = GuidePosition.above()
+                            ),
+                            highlight = GuideHighlight(
+                                shape = HoleShape.RoundRect(12.dp),
+                                padding = 8.dp
+                            ),
+                            onShown = {
+                                binding.itemStatus.text = "Item 3：等待自动滚动并定位"
+                            }
+                        )
+                    )
+                    .addStep(
+                        GuideStep(
+                            anchor = GuideAnchor.RecyclerViewItemAnchor(
+                                recyclerView = binding.itemRecycler,
+                                position = 7,
+                                childId = R.id.itemAction
+                            ),
+                            tooltip = GuideTooltip(
+                                content = GuideContent.Default(
+                                    title = "Item 8 · 等待滚动",
+                                    message = "isPending 为 true 时引导等待，不会按锚点丢失关闭。",
+                                    finishLabel = "完成"
+                                ),
+                                position = GuidePosition.above()
+                            ),
+                            highlight = GuideHighlight(
+                                shape = HoleShape.RoundRect(12.dp),
+                                padding = 8.dp
+                            ),
+                            onShown = {
+                                binding.itemStatus.text = "Item 8：等待滚动到目标后定位"
+                            }
+                        )
+                    )
+                    .listener(guideListener)
+                    .show(supportFragmentManager)
+            }
+        }
+    }
+
+    /** 等待 item 可见后再显示。 */
+    private fun bindWaitVisibleDemo() {
+        binding.waitStart.setOnClickListener {
+            binding.waitStatus.text = "列表已隐藏：引导正在等待 item 可见…"
+            binding.waitRecycler.visibility = View.INVISIBLE
+            binding.waitRecycler.postDelayed({
+                binding.waitRecycler.visibility = View.VISIBLE
+                binding.waitStatus.text = "列表已显示：等待滚动到 Item 8 并定位。"
+            }, 600L)
+
+            GuideDialogFragment.builder(this)
+                .addStep(
+                    GuideStep(
+                        anchor = GuideAnchor.RecyclerViewItemAnchor(
+                            recyclerView = binding.waitRecycler,
+                            position = 7,
+                            childId = R.id.itemAction
+                        ),
+                        content = GuideContent.Default(
+                            title = "等待可见",
+                            message = "列表隐藏 600ms；item 可见并滚动到位后，气泡才出现。",
+                            showIndicator = false,
+                            skipLabel = null
+                        ),
+                        position = GuidePosition.above(),
+                        highlight = GuideHighlight(
+                            shape = HoleShape.RoundRect(12.dp),
+                            padding = 8.dp
+                        )
+                    )
+                )
+                .listener(guideListener)
+                .show(supportFragmentManager)
+        }
+    }
+
+    /** 绑定 showOnce 演示。 */
+    private fun bindShowOnceDemo() {
+        binding.showOnce.setOnClickListener { showOnceDemo() }
         binding.showOnceReset.setOnClickListener {
             demoStorage.reset(ONCE_KEY)
             log("showOnce: 状态已重置，可以再次展示")
         }
-
-        binding.guideItemThird.setOnClickListener { showRecyclerItemGuide(position = 2) }
-        binding.guideItemLast.setOnClickListener { showRecyclerItemGuide(position = 7) }
-    }
-
-    // region 引导实现
-
-    /** 创建一个带统一日志监听器的 Builder。 */
-    private fun newGuide(): GuideDialogFragment.Builder =
-        GuideDialogFragment.builder(this).listener(guideListener)
-
-    /**
-     * 展示引导。若已有引导在显示，先关闭旧的，避免同一个 tag 被占用。
-     */
-    private fun present(builder: GuideDialogFragment.Builder) {
-        val fm = supportFragmentManager
-        (fm.findFragmentByTag(GuideDialogFragment.TAG) as? DialogFragment)?.let {
-            it.dismissAllowingStateLoss()
-            runCatching { fm.executePendingTransactions() }
-        }
-        builder.show(fm)
-    }
-
-    /** 把最新事件写到 hero 卡片底部（固定高度，不会影响布局）。 */
-    private fun log(message: String) {
-        binding.guideLog.text = message
-    }
-
-    /** 单步演示统一使用“完成”文案，避免每个方法重复 5 个默认参数。 */
-    private fun doneContent(title: CharSequence, message: CharSequence): GuideContent.Default =
-        GuideContent.Default(
-            title = title,
-            message = message,
-            primaryLabel = "完成",
-            finishLabel = "完成",
-            skipLabel = null,
-            showIndicator = false
-        )
-
-    /** 展示单个步骤，省掉重复的 `present(newGuide().addStep(...))` 包裹。 */
-    private fun presentStep(step: GuideStep) {
-        present(newGuide().addStep(step))
-    }
-
-    /**
-     * 单步演示：气泡默认在锚点上方。
-     * `configure` 用于追加 passThroughTargetTouch / advanceOnTargetClick 等开关。
-     */
-    private fun showTopStep(
-        anchor: View,
-        title: CharSequence,
-        message: CharSequence,
-        highlight: GuideHighlight,
-        configure: (GuideStep) -> GuideStep = { it }
-    ) {
-        presentStep(
-            configure(
-                GuideStep(
-                    view = anchor,
-                    content = doneContent(title, message),
-                    position = GuidePosition.Relative(side = Side.TOP),
-                    highlight = highlight
-                )
-            )
-        )
-    }
-
-    /** hero 卡片的完整三步引导：标题 → 说明 → 按钮。 */
-    private fun showHeroGuide() {
-        present(
-            newGuide()
-                .addStep(
-                    binding.heroTitle,
-                    GuideContent.Default(
-                        title = "标题锚点",
-                        message = "气泡会围绕这个标题显示。"
-                    ),
-                    GuidePosition.Relative(side = Side.BOTTOM, align = Alignment.CENTER)
-                )
-                .addStep(
-                    binding.heroSubtitle,
-                    GuideContent.Default(
-                        title = "说明锚点",
-                        message = "点击下一步会重新解析锚点并重新定位。"
-                    ),
-                    GuidePosition.Relative(side = Side.BOTTOM)
-                )
-                .addStep(
-                    binding.heroStart,
-                    GuideContent.Default(
-                        title = "按钮锚点",
-                        message = "最后一步指向按钮本身。",
-                        primaryLabel = "完成",
-                        finishLabel = "完成"
-                    ),
-                    GuidePosition.Relative(side = Side.TOP)
-                )
-        )
     }
 
     /** 首次进入自动播放一次，只指向 hero 内部始终可见的元素。 */
     private fun showWelcomeOnce() {
         GuideDialogFragment.builder(this)
             .addStep(
-                binding.heroTitle,
-                GuideContent.Default(
-                    title = "欢迎使用 PM Guide",
-                    message = "这是首次进入自动播放的引导，只会出现一次。"
-                ),
-                GuidePosition.Relative(side = Side.BOTTOM)
+                GuideStep(
+                    view = binding.heroTitle,
+                    content = GuideContent.Default(
+                        title = "欢迎使用 PM Guide",
+                        message = "这是首次进入自动播放的引导，只会出现一次。"
+                    ),
+                    position = GuidePosition.below()
+                )
             )
             .addStep(
-                binding.heroSubtitle,
-                GuideContent.Default(
-                    title = "向下就是 API 手册",
-                    message = "每张卡片里的按钮本身就是锚点，点一下就能看到对应能力。",
-                    primaryLabel = "完成",
-                    finishLabel = "完成"
-                ),
-                GuidePosition.Relative(side = Side.BOTTOM)
+                GuideStep(
+                    view = binding.heroSubtitle,
+                    content = GuideContent.Default(
+                        title = "向下就是 API 手册",
+                        message = "每张卡片按 API 类分组，点一次“播放”，再用“下一步”连续看完。",
+                        finishLabel = "完成"
+                    ),
+                    position = GuidePosition.below()
+                )
             )
             .listener(guideListener)
             .storage(demoStorage)
@@ -335,518 +1903,28 @@ class MainActivity : AppCompatActivity() {
             .show(supportFragmentManager)
     }
 
-    /**
-     * 三步引导，分别指向同一行的 A/B/C 三个芯片。
-     * 用于验证“点下一步后重新定位”以及 [GuideListener] 的步骤回调。
-     */
-    private fun showStepGuide(a: View, b: View, c: View) {
-        present(
-            newGuide()
-                .addStep(
-                    GuideStep(
-                        view = a,
-                        content = GuideContent.Default(
-                            title = "第 1 步 · 锚点 A",
-                            message = "点击下一步切换到锚点 B。"
-                        ),
-                        position = GuidePosition.Relative(side = Side.BOTTOM),
-                        highlight = GuideHighlight(
-                            shape = HoleShape.RoundRect(10.dp),
-                            padding = 6.dp
-                        )
-                    )
-                )
-                .addStep(
-                    GuideStep(
-                        view = b,
-                        content = GuideContent.Default(
-                            title = "第 2 步 · 锚点 B",
-                            message = "新锚点会被重新解析，气泡不会停在 alpha = 0。"
-                        ),
-                        position = GuidePosition.Relative(side = Side.TOP),
-                        highlight = GuideHighlight(
-                            shape = HoleShape.RoundRect(10.dp),
-                            padding = 6.dp
-                        )
-                    )
-                )
-                .addStep(
-                    GuideStep(
-                        view = c,
-                        content = GuideContent.Default(
-                            title = "第 3 步 · 锚点 C",
-                            message = "最后一步，主按钮会触发 session.finish()。",
-                            primaryLabel = "完成",
-                            finishLabel = "完成"
-                        ),
-                        position = GuidePosition.Relative(side = Side.BOTTOM),
-                        highlight = GuideHighlight(
-                            shape = HoleShape.RoundRect(10.dp),
-                            padding = 6.dp
-                        )
-                    )
-                )
-        )
-    }
-
-    /**
-     * 指向 RecyclerView 指定 adapter position 的 item 操作按钮。
-     *
-     * 目标不在屏幕上时会自动滚动；[GuideAnchor.RecyclerViewItemAnchor]
-     * 在等待布局期间返回 pending，引导不会误判为锚点丢失。
-     */
-    private fun showRecyclerItemGuide(position: Int) {
-        presentStep(
-            GuideStep(
-                anchor = GuideAnchor.RecyclerViewItemAnchor(
-                    recyclerView = binding.itemRecycler,
-                    position = position,
-                    childId = R.id.itemAction
-                ),
-                content = doneContent(
-                    "RecyclerView Item ${position + 1}",
-                    "锚点按 adapter position 解析，item 滚动或复用后仍然有效。"
-                ),
-                position = GuidePosition.Relative(side = Side.TOP),
-                highlight = GuideHighlight(
-                    shape = HoleShape.RoundRect(12.dp),
-                    padding = 8.dp
-                )
-            )
-        )
-    }
-
-    /**
-     * 单步方位演示。默认按点击的按钮作为锚点；
-     * START / END 使用更窄的气泡，方便在屏幕左右两侧放下。
-     */
-    private fun showPlacement(
-        side: Side,
-        anchor: View,
-        alignMode: Alignment = Alignment.CENTER,
-        offsetX: Dp = 0.dp,
-        offsetY: Dp = 0.dp
-    ) {
-        val sidePlacement = side == Side.START || side == Side.END
-        presentStep(
-            GuideStep(
-                anchor = GuideAnchor.ViewAnchor(anchor),
-                tooltip = GuideTooltip(
-                    content = doneContent("Side.$side", sideLabel(side)),
-                    position = GuidePosition.Relative(
-                        side = side,
-                        align = alignMode,
-                        offsetX = offsetX,
-                        offsetY = offsetY
-                    ),
-                    maxWidth = GuideWidth.Fixed(if (sidePlacement) 130.dp else 220.dp)
-                ),
-                highlight = GuideHighlight(
-                    shape = HoleShape.RoundRect(10.dp),
-                    padding = 6.dp
-                )
-            )
-        )
-    }
-
-    /** 方位对应的说明文案。 */
-    private fun sideLabel(side: Side): String = when (side) {
-        Side.TOP -> "气泡在锚点上方。"
-        Side.BOTTOM -> "气泡在锚点下方。"
-        Side.START -> "气泡在锚点左侧（RTL 下自动翻转）。"
-        Side.END -> "气泡在锚点右侧（RTL 下自动翻转）。"
-        Side.AUTO -> "自动选择第一个放得下的方向。"
-    }
-
-    /** 示范自定义遮罩颜色；alpha = 0 时不绘制遮罩。 */
-    private fun showMask(anchor: View, color: Int, label: String) {
-        presentStep(
-            GuideStep(
-                view = anchor,
-                content = doneContent(
-                    "遮罩：$label",
-                    "maskColor = #${Integer.toHexString(color)}"
-                ),
-                position = GuidePosition.Relative(side = Side.BOTTOM),
-                highlight = GuideHighlight(
-                    shape = HoleShape.RoundRect(12.dp),
-                    padding = 8.dp,
-                    maskColor = color
-                )
-            )
-        )
-    }
-
-    /** 示范用半透明白色提亮挖洞区域；与遮罩颜色相互独立。 */
-    private fun showHoleGlow(anchor: View) {
-        presentStep(
-            GuideStep(
-                view = anchor,
-                content = doneContent(
-                    "挖洞高亮",
-                    "holeOverlayColor = 0x33FFFFFF，给洞内区域叠加一层半透明白色。"
-                ),
-                position = GuidePosition.Relative(side = Side.BOTTOM),
-                highlight = GuideHighlight(
-                    shape = HoleShape.RoundRect(12.dp),
-                    padding = 8.dp,
-                    holeOverlayColor = 0x33FFFFFF
-                )
-            )
-        )
-    }
-
-    /** 示范气泡背景色、圆角、描边和文字颜色。 */
-    private fun showBubbleStyle(anchor: View) {
-        presentStep(
-            GuideStep(
-                anchor = GuideAnchor.ViewAnchor(anchor),
-                tooltip = GuideTooltip(
-                    content = doneContent(
-                        "自定义气泡",
-                        "背景色、圆角、描边和文字颜色都可以单独设置。"
-                    ).copy(
-                        titleColor = 0xFF4E342E.toInt(),
-                        messageColor = 0xFF6D4C41.toInt()
-                    ),
-                    position = GuidePosition.Relative(side = Side.BOTTOM),
-                    backgroundColor = 0xFFFFF8E1.toInt(),
-                    cornerRadius = 22.dp,
-                    strokeColor = 0xFFFFB300.toInt(),
-                    strokeWidth = 2.dp
-                ),
-                highlight = GuideHighlight(
-                    shape = HoleShape.RoundRect(14.dp),
-                    padding = 10.dp
-                )
-            )
-        )
-    }
-
-    /**
-     * 挖洞形状演示：锚点就是对应形状的预览按钮，
-     * 洞使用同一个 [HoleShape]，所以两者形状一致。
-     */
-    private fun showHoleShape(anchor: View, shape: HoleShape, label: String, paddingDp: Int) {
-        showTopStep(
-            anchor = anchor,
-            title = "HoleShape.$label",
-            message = "按钮和挖洞使用同一个形状。",
-            highlight = GuideHighlight(shape = shape, padding = paddingDp.dp)
-        )
-    }
-
-    /** 构造自定义星形 Path。 */
-    private fun starShape(): HoleShape = HoleShape.Custom { rect, path ->
-        buildStarPath(rect, path)
-    }
-
-    /** 洞 = 锚点矩形 + padding，默认大小。 */
-    private fun showHoleSizeDefault(anchor: View) {
-        showTopStep(
-            anchor = anchor,
-            title = "默认大小",
-            message = "洞 = 锚点矩形 + 四周 padding。",
-            highlight = GuideHighlight(
-                shape = HoleShape.RoundRect(12.dp),
-                padding = 4.dp
-            )
-        )
-    }
-
-    /** 用较大的 padding 把洞向四周放大。 */
-    private fun showHoleSizeLarge(anchor: View) {
-        showTopStep(
-            anchor = anchor,
-            title = "放大 22dp",
-            message = "padding 同时是气泡定位的起算距离。",
-            highlight = GuideHighlight(
-                shape = HoleShape.RoundRect(18.dp),
-                padding = 22.dp
-            )
-        )
-    }
-
-    /** 用 holeRectProvider 返回固定的 180×88dp 洞。 */
-    private fun showHoleSizeFixed(anchor: View) {
-        showTopStep(
-            anchor = anchor,
-            title = "固定 180×88dp",
-            message = "holeRectProvider 忽略锚点尺寸，只在中心对齐。",
-            highlight = GuideHighlight(
-                shape = HoleShape.RoundRect(20.dp),
-                holeRectProvider = { anchorRect ->
-                    Rect(
-                        anchorRect.centerX() - dp(90),
-                        anchorRect.centerY() - dp(44),
-                        anchorRect.centerX() + dp(90),
-                        anchorRect.centerY() + dp(44)
-                    )
-                }
-            )
-        )
-    }
-
-    /** 读取锚点 rect，并保证洞至少 160×72dp。 */
-    private fun showHoleSizeAnchorBased(anchor: View) {
-        showTopStep(
-            anchor = anchor,
-            title = "锚点 + 最小尺寸",
-            message = "读取回调里的 anchor，保证洞至少 160×72dp。",
-            highlight = GuideHighlight(
-                shape = HoleShape.RoundRect(16.dp),
-                holeRectProvider = { anchorRect ->
-                    val width = maxOf(anchorRect.width(), dp(160))
-                    val height = maxOf(anchorRect.height(), dp(72))
-                    Rect(
-                        anchorRect.centerX() - width / 2,
-                        anchorRect.centerY() - height / 2,
-                        anchorRect.centerX() + width / 2,
-                        anchorRect.centerY() + height / 2
-                    )
-                }
-            )
-        )
-    }
-
-    /** 挖洞入场动画演示：None / Scale / Fade。 */
-    private fun showHoleAnimation(anchor: View, animation: HoleAnimation, label: String) {
-        showTopStep(
-            anchor = anchor,
-            title = "HoleAnimation.$label",
-            message = "动画只在步骤首次定位时播放。",
-            highlight = GuideHighlight(
-                shape = HoleShape.RoundRect(14.dp),
-                padding = 12.dp,
-                holeAnimation = animation
-            )
-        )
-    }
-
-    /**
-     * 锚点穿透：洞内的触摸会转发给 Activity。
-     * 计数按钮同时是触发器和锚点，第一次点击打开引导，之后透传点击才会 +1。
-     */
-    private fun showPassThrough(anchor: View) {
-        showTopStep(
-            anchor = anchor,
-            title = "锚点穿透",
-            message = "洞内的触摸会转发给宿主 Activity。直接点计数按钮，引导不会关闭。",
-            highlight = GuideHighlight(
-                shape = HoleShape.RoundRect(12.dp),
-                padding = 10.dp
-            )
-        ) { it.copy(passThroughTargetTouch = true) }
-    }
-
-    /** 点击洞直接完成：只触发 session.next()，不执行按钮自身逻辑。 */
-    private fun showAdvanceOnTargetClick(anchor: View) {
-        showTopStep(
-            anchor = anchor,
-            title = "点击洞 = 完成",
-            message = "advanceOnTargetClick 只把点击洞映射成 next()，不会执行按钮自身逻辑。",
-            highlight = GuideHighlight(
-                shape = HoleShape.RoundRect(12.dp),
-                padding = 10.dp
-            )
-        ) { it.copy(advanceOnTargetClick = true) }
-    }
-
-    /**
-     * 局部遮罩：只压暗按钮周围，范围之外的触摸继续交给页面。
-     * 弹引导后可以上下滚动列表，观察遮罩和气泡跟随锚点。
-     */
-    private fun showLocalMask(anchor: View) {
-        showTopStep(
-            anchor = anchor,
-            title = "局部遮罩",
-            message = "只有按钮周围被压暗，其他区域仍然可以滚动和点击。试试上下滑动列表。",
-            highlight = GuideHighlight(
-                shape = HoleShape.RoundRect(12.dp),
-                padding = 8.dp,
-                maskRectProvider = { _, anchorRect ->
-                    val padX = dp(80)
-                    val padY = dp(100)
-                    Rect(
-                        anchorRect.left - padX,
-                        anchorRect.top - padY,
-                        anchorRect.right + padX,
-                        anchorRect.bottom + padY
-                    )
-                }
-            )
-        ) { it.copy(passThroughOutsideMask = true) }
-    }
-
-    /**
-     * 自定义气泡内容：使用 ViewBinding 直接访问控件，不再 findViewById。
-     * 分两步演示 A/B 两个锚点上的自定义布局。
-     */
-    private fun showCustomContent(anchorA: View, anchorB: View) {
-        val custom = GuideContent.CustomBinding(
-            create = { inflater, parent ->
-                ViewGuideCustomDemoBinding.inflate(inflater, parent, false)
-            },
-            bind = { viewBinding, session ->
-                val step = session.index + 1
-                viewBinding.customGuideMessage.text =
-                    "当前第 $step/${session.steps.size} 步。按钮直接调用 session.previous() / next()。"
-                viewBinding.customGuidePrevious.setOnClickListener { session.previous() }
-                viewBinding.customGuideNext.setOnClickListener { session.next() }
-            }
-        )
-
-        present(
-            newGuide()
-                .addStep(
-                    GuideStep(
-                        anchor = GuideAnchor.ViewAnchor(anchorA),
-                        tooltip = GuideTooltip(
-                            content = custom,
-                            position = GuidePosition.below()
-                        )
-                    )
-                )
-                .addStep(
-                    GuideStep(
-                        anchor = GuideAnchor.ViewAnchor(anchorB),
-                        tooltip = GuideTooltip(
-                            content = custom,
-                            position = GuidePosition.below()
-                        )
-                    )
-                )
-        )
-    }
-
-    /** 用 [GuidePosition.Custom] 把气泡固定在可用区域底部居中。 */
-    private fun showCustomPosition(anchor: View) {
-        presentStep(
-            GuideStep(
-                anchor = GuideAnchor.ViewAnchor(anchor),
-                tooltip = GuideTooltip(
-                    content = doneContent(
-                        "自定义定位",
-                        "GuidePosition.Custom 返回任意矩形；这里固定在可用区域底部居中，并关闭箭头。"
-                    ),
-                    position = GuidePosition.Custom { _, size, available ->
-                        val left = available.centerX() - size.width / 2
-                        val top = available.bottom - size.height - dp(24)
-                        Rect(left, top, left + size.width, top + size.height)
-                    },
-                    arrow = GuideArrow(enabled = false),
-                    maxWidth = GuideWidth.Fixed(300.dp)
-                ),
-                highlight = GuideHighlight(
-                    shape = HoleShape.RoundRect(12.dp),
-                    padding = 8.dp
-                )
-            )
-        )
-    }
-
-    /** 气泡宽度占满可用屏幕宽度，两侧保留 [GuideTooltip.edgePadding]。 */
-    private fun showFillScreenWidth(anchor: View) {
-        presentStep(
-            GuideStep(
-                anchor = GuideAnchor.ViewAnchor(anchor),
-                tooltip = GuideTooltip(
-                    content = doneContent(
-                        "GuideWidth.FillScreen",
-                        "气泡宽度 = 可用屏幕宽度 - 两侧 edgePadding。"
-                    ),
-                    position = GuidePosition.Relative(side = Side.BOTTOM),
-                    maxWidth = GuideWidth.FillScreen
-                ),
-                highlight = GuideHighlight(
-                    shape = HoleShape.RoundRect(10.dp),
-                    padding = 6.dp
-                )
-            )
-        )
-    }
-
-    /** 气泡宽度占满遮罩宽度；遮罩由 maskRectProvider 缩小到按钮附近。 */
-    private fun showFillMaskWidth(anchor: View) {
-        presentStep(
-            GuideStep(
-                anchor = GuideAnchor.ViewAnchor(anchor),
-                tooltip = GuideTooltip(
-                    content = doneContent(
-                        "GuideWidth.FillMask",
-                        "气泡宽度 = 遮罩宽度 - 两侧 edgePadding；没有 maskRectProvider 时等同 FillScreen。"
-                    ),
-                    position = GuidePosition.Relative(side = Side.BOTTOM),
-                    maxWidth = GuideWidth.FillMask
-                ),
-                highlight = GuideHighlight(
-                    shape = HoleShape.RoundRect(10.dp),
-                    padding = 6.dp,
-                    maskRectProvider = { _, anchorRect ->
-                        val padX = dp(60)
-                        val padY = dp(140)
-                        Rect(
-                            anchorRect.left - padX,
-                            anchorRect.top - padY,
-                            anchorRect.right + padX,
-                            anchorRect.bottom + padY
-                        )
-                    }
-                )
-            )
-        )
-    }
-
-    /**
-     * RectAnchor 演示：点击时把按钮位置换算成一个固定屏幕矩形，
-     * 之后不再跟随按钮移动（followAnchor = false）。
-     */
-    private fun showRectAnchor(trigger: View) {
-        val location = IntArray(2)
-        trigger.getLocationOnScreen(location)
-        val halfWidth = trigger.width / 2 + dp(16)
-        val halfHeight = trigger.height / 2 + dp(16)
-        val cx = location[0] + trigger.width / 2
-        val cy = location[1] + trigger.height / 2
-        val fixedScreenRect = Rect(
-            cx - halfWidth,
-            cy - halfHeight,
-            cx + halfWidth,
-            cy + halfHeight
-        )
-
-        presentStep(
-            GuideStep(
-                anchor = GuideAnchor.RectAnchor { fixedScreenRect },
-                content = doneContent(
-                    "RectAnchor",
-                    "不依赖任何 View，按屏幕矩形定位与挖洞。"
-                ),
-                position = GuidePosition.Relative(side = Side.BOTTOM),
-                highlight = GuideHighlight(
-                    shape = HoleShape.RoundRect(14.dp),
-                    padding = 0.dp
-                )
-            ).copy(followAnchor = false)
-        )
-    }
-
-    /** showOnce 演示；状态可以由本卡片的“重置状态”或右上角菜单清理。 */
-    private fun showOnceDemo(anchor: View) {
-        val fragment = newGuide()
+    /** showOnce 演示；完成或跳过后写入本地存储。 */
+    private fun showOnceDemo() {
+        val guide = GuideDialogFragment.builder(this)
             .addStep(
-                anchor,
-                doneContent(
-                    "showOnce",
-                    "完成或跳过后写入 GuideStorage，下次点击会直接跳过。"
-                ).copy(skipLabel = "跳过")
+                GuideStep(
+                    view = binding.showOnce,
+                    content = GuideContent.Default(
+                        title = "showOnce",
+                        message = "完成或跳过后写入 GuideStorage，下次点击会直接跳过。",
+                        showIndicator = false,
+                        skipLabel = "跳过"
+                    ),
+                    position = GuidePosition.above()
+                )
             )
+            .listener(guideListener)
             .storage(demoStorage)
             .showOnce(ONCE_KEY)
             .show(supportFragmentManager)
 
         log(
-            if (fragment == null) {
+            if (guide == null) {
                 "showOnce: 已看过，本次跳过"
             } else {
                 "showOnce: 展示中（完成或跳过才落盘）"
@@ -854,26 +1932,26 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    // endregion
+    /** 把最新事件写到 hero 卡片底部。 */
+    private fun log(message: String) {
+        binding.guideLog.text = message
+    }
 
-    /** dp 转 px，用于示例里的手工间距。 */
+    /** dp 转 px。 */
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).roundToInt()
 
-    /**
-     * 基于 SharedPreferences 的演示存储。
-     *
-     * ## 说明
-     * 支持单个 key 重置和全部清空，供 showOnce 示例和工具栏菜单使用。
-     */
+    /** 基于 SharedPreferences 的演示存储。 */
     private inner class DemoStorage : GuideStorage {
+
+        /** 演示专用的 SharedPreferences。 */
         private val prefs: SharedPreferences =
             getSharedPreferences("pm_guide_handbook", MODE_PRIVATE)
 
-        /** 该 key 是否已经完成/跳过过。 */
+        /** 判断某个 key 是否已经完成或跳过。 */
         override fun wasShown(key: String): Boolean = prefs.getBoolean(key, false)
 
-        /** 完成后写入标记。 */
+        /** 完成或跳过后写入标记。 */
         override fun markShown(key: String) {
             prefs.edit().putBoolean(key, true).apply()
         }
@@ -883,13 +1961,14 @@ class MainActivity : AppCompatActivity() {
             prefs.edit().remove(key).apply()
         }
 
-        /** 清空所有引导状态，供工具栏菜单使用。 */
+        /** 清空所有引导状态。 */
         fun clear() {
             prefs.edit().clear().apply()
         }
     }
 
     private companion object {
+
         /** 首次进入自动播放的欢迎引导 key。 */
         const val WELCOME_KEY = "handbook_welcome_v1"
 

@@ -67,7 +67,7 @@ interface GuideListener {
      * 布局过程中重新绑定步骤。
      *
      * @param anchorRect 锚点当前的可见矩形。
-     * @param holeRect 实际挖洞矩形；没有挖洞（[GuideHighlight.shape] 为 null）时为 null。
+     * @param holeRect 实际高亮区矩形；没有高亮区（[GuideHighlight.shape] 为 null）时为 null。
      * @param tooltipRect 气泡最终所在矩形。
      */
     fun onStepLocated(
