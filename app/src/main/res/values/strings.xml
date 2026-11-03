@@ -13,6 +13,11 @@
     <string name="handbook_hero_action">开始</string>
     <string name="handbook_reset">重置引导状态</string>
 
+    <string name="tab_home">首页</string>
+    <string name="tab_basics">基础</string>
+    <string name="tab_bubble">气泡</string>
+    <string name="tab_anchor">锚点</string>
+
     <string name="demo_counter_value">点击计数：%1$d</string>
     <string name="demo_counter_start">点击计数：0 · 点我开始</string>
 

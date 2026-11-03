@@ -6,6 +6,7 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.guide.databinding.ActivityMainBinding
@@ -139,8 +140,44 @@ class MainActivity : AppCompatActivity() {
         setupToolbar()
         setupRecyclerView()
         bindSections()
+        setupBottomBar()
+        fitContentAboveBottomBar()
 
         binding.root.post { showWelcomeOnce() }
+    }
+
+    /** 底栏作为页面内导航：切到对应 API 分组。 */
+    private fun setupBottomBar() {
+        binding.bottomBar.setOnItemSelectedListener { item ->
+            scrollToTab(item.itemId)
+            true
+        }
+        // 已选中的 tab 再次点击时也回到对应分组。
+        binding.bottomBar.setOnItemReselectedListener { item ->
+            scrollToTab(item.itemId)
+        }
+    }
+
+    /** 把滚动容器定位到 tab 对应的分组顶部。 */
+    private fun scrollToTab(itemId: Int) {
+        val scrollY = when (itemId) {
+            R.id.tabHome -> 0
+            R.id.tabBasics -> binding.sectionBasics.top
+            R.id.tabBubble -> binding.sectionBubble.top
+            R.id.tabAnchor -> binding.sectionAnchor.top
+            else -> return
+        }
+        binding.demoScroll.smoothScrollTo(0, scrollY)
+    }
+
+    /**
+     * 底栏覆盖在滚动内容上方，内容可以滑到栏下方；通过底部 padding 保证滚动到底时
+     * 最后一段内容仍停在底栏上方，不会被遮挡。
+     */
+    private fun fitContentAboveBottomBar() {
+        binding.bottomBarBlur.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            binding.demoScroll.updatePadding(bottom = binding.bottomBarBlur.height + dp(24))
+        }
     }
 
     /** 配置顶栏菜单和“重置引导状态”。 */

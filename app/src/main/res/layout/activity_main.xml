@@ -123,6 +123,7 @@
 
             <!-- 1. 创建与展示 -->
             <com.example.guide.HandBookSectionView
+                android:id="@+id/sectionBasics"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:hbCode="@string/hb_code_builder"
@@ -552,6 +553,7 @@
 
             <!-- 10. 默认气泡 -->
             <com.example.guide.HandBookSectionView
+                android:id="@+id/sectionBubble"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:hbCode="@string/hb_code_content_default"
@@ -836,6 +838,7 @@
 
             <!-- 17. 静态锚点 -->
             <com.example.guide.HandBookSectionView
+                android:id="@+id/sectionAnchor"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:hbCode="@string/hb_code_anchor"
@@ -1261,5 +1264,27 @@
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <!-- 毛玻璃底栏：覆盖在滚动内容之上，内容从下方经过时会实时模糊。 -->
+    <com.example.guide.RealtimeBlurView
+        android:id="@+id/bottomBarBlur"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:elevation="8dp"
+        app:hbBlurRadius="16dp"
+        app:hbCornerRadius="24dp"
+        app:hbDownsample="4"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_handbook_bottom_bar"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/menu_bottom_bar" />
+    </com.example.guide.RealtimeBlurView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,573 @@
+diff --git a/com/hikvision/b_sight_devicemanager/ui/home/HomeModulesFragment.kt b/com/hikvision/b_sight_devicemanager/ui/home/HomeModulesFragment.kt
+--- a/com/hikvision/b_sight_devicemanager/ui/home/HomeModulesFragment.kt
++++ b/com/hikvision/b_sight_devicemanager/ui/home/HomeModulesFragment.kt
+@@ -66,6 +66,7 @@
+ import hik.common.sight.uicommon.widget.CustomRefreshFooter
+ import hik.common.sight.uicommon.widget.CustomRefreshHeader
+ import hik.common.sight.uicommon.widget.StatusDialog
++import kotlinx.coroutines.CompletableDeferred
+ import java.util.Calendar
+ import java.util.concurrent.CopyOnWriteArrayList
+ import hik.common.sight.businesscommon.R as commonR
+@@ -80,6 +81,9 @@
+ 
+         /** 两次设备搜索之间的最小间隔，避免频繁重复搜索登录。 */
+         private const val SEARCH_DEVICE_INTERVAL_MS = 1_000L
++
++        /** 入口参数：其他页面（如会员尝鲜领取）已确认的会员等级。 */
++        private const val ARG_MEMBER_LEVEL = "memberLevel"
+     }
+ 
+     private lateinit var binding: FragmentHomeModulesBinding
+@@ -97,6 +101,8 @@
+     /** 整页刷新过程中需要触发的各项数据请求。 */
+     private val dataSources = object : HomeDataSources {
+         override suspend fun requestDeviceList() {
++            // 没登录先搜索登录，登录完成后再拉设备列表；已有登录在进行时复用它
++            awaitDeviceLogin()
+             Logging.i(TAG, "获取设备列表开始")
+             deviceManagerViewModel.initDeviceData(requireActivity())
+             runCatching { deviceManagerViewModel.initJob?.join() }
+@@ -104,6 +110,9 @@
+         }
+     }
+ 
++    /** 设备搜索登录进行中的等待器；多个刷新复用同一次登录。 */
++    private var deviceLogin: CompletableDeferred<Unit>? = null
++
+     /** 上一次设备搜索的时间戳，短时间内重复下拉时不重复搜索登录。 */
+     private var searchDeviceTimeStamp = 0L
+ 
+@@ -113,12 +122,36 @@
+     /** 切换猎场/物种期间的加载弹窗实例，重复切换时不重复创建。 */
+     private var huntingSwitchLoadingDialog: StatusDialog? = null
+ 
+-    /** 通知权限申请结果：系统弹窗结束后再整页刷新，避免与授权弹窗同时弹出。 */
++    /** 通知权限申请结果：只记录结果，不阻塞首页刷新。 */
+     private val notificationPermissionLauncher = registerForActivityResult(
+         ActivityResultContracts.RequestPermission()
+     ) { isGranted ->
+         Logging.i(TAG, "onNotificationPermissionResult: $isGranted")
+-        searchDevice()
++    }
++
++    /**
++     * 确保设备搜索登录完成后再拉设备列表。
++     * 已有登录在进行时复用同一个等待；距上次搜索过近时跳过重复搜索，直接用现有会话继续刷新。
++     */
++    private suspend fun awaitDeviceLogin() {
++        if (SharedDataManager.isDeviceDownloading || SharedDataManager.deviceInfoEntry != null) {
++            return
++        }
++        val running = deviceLogin?.takeIf { it.isActive }
++        if (running != null) {
++            running.await()
++            return
++        }
++        if (System.nanoTime() - searchDeviceTimeStamp <= SEARCH_DEVICE_INTERVAL_MS * 1_000_000) {
++            return
++        }
++        searchDeviceTimeStamp = System.nanoTime()
++        val login = CompletableDeferred<Unit>()
++        deviceLogin = login
++        Logging.i(TAG, "startSearchDevice")
++        sharedViewModel().isFirstSearchDevice = false
++        sharedViewModel().startSearchDevice()
++        login.await()
+     }
+ 
+     override fun onCreate(savedInstanceState: Bundle?) {
+@@ -153,19 +186,24 @@
+         FlurryUtil.logEvent(FlurryEvent.Home_EnterHome)
+         handleDesktopQuickEntry()
+         updateFirebaseToken()
+-        // 首页模式可能在离开首页期间被其他页面直接持久化（如会员尝鲜领取后开启狩猎模式）：
+-        // 刷新前先按配置兜底同步，模式有变化时展示加载中，等级变化检测由当前模式自然抑制弹窗
+-        homeModulesViewModel.syncHomeModeFromConfig()
+-        refreshData()
+-    }
+-
+-    override fun onStop() {
+-        super.onStop()
+-        homeModulesViewModel.refreshJob?.cancel()
++
++        // 会员礼包领取页回跳会带会员等级：本轮不检查升降级，按领取页确认的等级和模式刷新
++        val giftLevel = arguments?.getString(ARG_MEMBER_LEVEL)?.takeIf { it.isNotBlank() }
++        arguments?.remove(ARG_MEMBER_LEVEL)
++
++        if (!refreshPageContent()) return
++        if (giftLevel == null) {
++            homeModulesViewModel.refreshHome()
++        } else {
++            homeModulesViewModel.onGiftBack(giftLevel)
++        }
+     }
+ 
+     override fun onDestroyView() {
+-        // 页面销毁后清空待弹弹窗，避免残留任务再尝试弹出
++        // 页面销毁：取消刷新和等待，清空登录等待与弹窗队列
++        homeModulesViewModel.onHomeDestroyed()
++        deviceLogin?.cancel()
++        deviceLogin = null
+         PopupQueue.reset()
+         super.onDestroyView()
+     }
+@@ -273,21 +311,26 @@
+         binding.refreshView.setDisableContentWhenLoading(false)
+         binding.refreshView.isEnableLoadmore = false
+         binding.refreshView.isLoadmoreFinished = true
+-        binding.refreshView.setOnRefreshListener { refreshData() }
++        binding.refreshView.setOnRefreshListener {
++            if (refreshPageContent()) {
++                homeModulesViewModel.refreshHome()
++            }
++        }
+     }
+ 
+     /**
+-     * 触发整页刷新
++     * 首页自己的内容请求：网络绑定、隐私、公告、会员礼包、banner、设备组、升级信息。
++     * @return 隐私协议未同意时返回 false，本轮刷新不再继续。
+      */
+-    private fun refreshData() {
++    private fun refreshPageContent(): Boolean {
+         NetworkManager.INSTANCE.bindToNetwork()
+         if (isWildCoverVersion()) {
+             sharedViewModel().getLatestPrivacy()
+         }
+-        // 未同意隐私协议时不发起任何请求，本次下拉直接收尾
++        // 未同意隐私协议时不发起任何请求，本次刷新直接收尾
+         if (!isAgreePrivacy()) {
+             finishRefresh(1000)
+-            return
++            return false
+         }
+ 
+         // 整页刷新时同步拉取待展示公告
+@@ -296,7 +339,13 @@
+         bannerViewModel.getBanners()
+         groupViewModel.refreshDeviceGroups()
+         sharedViewModel().getDeviceUpdateInfo()
+-
++        // 通知权限独立申请，不阻塞整页刷新
++        requestNotificationPermissionIfNeeded()
++        return true
++    }
++
++    /** 需要时申请通知权限；不阻塞首页刷新。 */
++    private fun requestNotificationPermissionIfNeeded() {
+         if (isWildCoverVersion() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+             ContextCompat.checkSelfPermission(
+                 requireContext(),
+@@ -304,23 +353,7 @@
+             ) != PackageManager.PERMISSION_GRANTED
+         ) {
+             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+-        } else if (SharedDataManager.deviceInfoEntry == null && !SharedDataManager.isDeviceDownloading) {
+-            // 如果有资源下载时，不进行设备搜索登录; 如果没有资源下载时，触发设备搜索登录
+-            searchDevice()
+-        } else {
+-            homeModulesViewModel.refreshData()
+-        }
+-    }
+-
+-    /** 触发设备搜索与登录；距上次搜索过近时只跳过重复搜索，本次刷新仍继续走完流程。 */
+-    private fun searchDevice() {
+-        if (System.nanoTime() - searchDeviceTimeStamp <= SEARCH_DEVICE_INTERVAL_MS * 1_000_000) {
+-            return
+-        }
+-        searchDeviceTimeStamp = System.nanoTime()
+-        Logging.i(TAG, "searchDevice")
+-        sharedViewModel().isFirstSearchDevice = false
+-        sharedViewModel().startSearchDevice()
++        }
+     }
+ 
+     private fun initObserver() {
+@@ -356,9 +389,10 @@
+             }
+         }
+ 
+-        // 登录完设备接着往下走整页刷新
++        // 设备搜索登录结束：放行正在等登录的刷新
+         dealWithLiveData(sharedViewModel().loginDeviceManagerDeviceResult) {
+-            homeModulesViewModel.refreshData()
++            deviceLogin?.complete(Unit)
++            deviceLogin = null
+         }
+ 
+         // 公告拉取结果：命中展示条件即弹出窗口
+@@ -478,11 +512,14 @@
+                     getString(R.string.IKnow),
+                     R.drawable.shape_corner_30_brand_color,
+                 ) {
+-                    showFullScreenLoadingDialog()
+-                    // 点「我知道了」后先更新插槽，继续后续刷新
+-                    homeModulesViewModel.continueRefresh()
+-                }
+-                .setOnDismissListener { PopupQueue.showNext() }
++                    // 点击后由 ViewModel 切模式、显示全屏 loading、继续刷新
++                    homeModulesViewModel.onLevelDialogClosed()
++                }
++                .setOnDismissListener {
++                    PopupQueue.showNext()
++                    // 返回键等非按钮方式关闭也要放行，避免刷新链路一直挂着
++                    homeModulesViewModel.onLevelDialogClosed()
++                }
+                 .show(childFragmentManager, CommonMessageDialog.TAG)
+         }
+     }
+diff --git a/com/hikvision/b_sight_devicemanager/viewmodel/HomeModulesViewModel.kt b/com/hikvision/b_sight_devicemanager/viewmodel/HomeModulesViewModel.kt
+--- a/com/hikvision/b_sight_devicemanager/viewmodel/HomeModulesViewModel.kt
++++ b/com/hikvision/b_sight_devicemanager/viewmodel/HomeModulesViewModel.kt
+@@ -44,7 +44,6 @@
+ import kotlinx.coroutines.Job
+ import kotlinx.coroutines.async
+ import kotlinx.coroutines.coroutineScope
+-import kotlinx.coroutines.delay
+ import kotlinx.coroutines.flow.MutableSharedFlow
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.SharedFlow
+@@ -56,7 +55,6 @@
+ import kotlinx.coroutines.launch
+ import java.util.Calendar
+ import kotlin.math.roundToInt
+-import kotlin.time.Duration.Companion.milliseconds
+ 
+ /**
+  * 首页模块 ViewModel
+@@ -94,11 +92,11 @@
+     /** 各项数据请求的触发入口 */
+     var dataSources: HomeDataSources? = null
+ 
+-    /** 正在进行的整页刷新Job */
+-    var refreshJob: Job? = null
+-
+-    /** 继续刷新阻塞 */
+-    private var continueRefreshComplete: CompletableDeferred<Unit>? = null
++    /** 当前整页刷新任务；页面销毁时统一取消。 */
++    private var refreshJob: Job? = null
++
++    /** 等级弹窗等待用户点「我知道了」；非空期间不再发起新的刷新，避免重复弹窗。 */
++    private var levelDialogWaiter: CompletableDeferred<Unit>? = null
+ 
+     private var lastMemberLevel = UserSettingConfig.INSTANCE.memberLevel
+ 
+@@ -154,70 +152,173 @@
+     }
+ 
+     /**
+-     * 整页刷新的流程入口
++     * 刷新首页：页面可见、下拉刷新都调这里。
+      *
+-     * 会员等级判断 → 白名单 → 用户权益 → 设备列表 → 拉取猎场 → 狩猎 → 抓拍
+-     */
+-    fun refreshData() = viewModelScope.launch {
++     * 流程：按本地保存的模式同步页面 → 检查会员等级 → 拉数据 → 收尾。
++     * 等级变化需要提示时，先弹窗等用户点「我知道了」，再切模式、显示全屏 loading、
++     * 继续拉数据；刷新结束时统一发 RefreshFinished 收起 loading。
++     */
++    fun refreshHome() {
++        // 等级弹窗还在等用户点击时，不启动新刷新，也不取消正在等待的任务
++        if (levelDialogWaiter != null) {
++            // 下拉动画先收尾；确认后原刷新链路会继续并再次发 RefreshFinished
++            _homeModulesEffect.tryEmit(HomeModulesEffect.RefreshFinished)
++            return
++        }
++
++        // 离开首页期间可能被别的页面改了模式（如会员尝鲜领取后开启狩猎模式）
++        if (applyMode(HomeMode.fromRaw(UserSettingConfig.INSTANCE.homeMode))) {
++            showModeLoading()
++        }
++
+         refreshJob?.cancel()
+         refreshJob = viewModelScope.launch {
+-            // 判断会员等级是否变化
+-            checkMemberHasChange()
+-            // 刷新耗时触发开始计时（会员升降级不统计，因为有弹窗确认）
+-            val refreshStartTimeStamp = System.currentTimeMillis()
+-            // 更新白名单
+-            requestUserFunctionList()
+-            // 获取用户权益
+-            checkUserRightsHasChange()
+-            // 获取设备列表
+-            dataSources?.requestDeviceList()
+-            // 检查是否自动切换为Hunter模式
+-            checkAutoSwitchHunterMode()
+-            // 获取打猎数据
+-            requestHunting()
+-            // 整页刷新流程结束，通知外层（如下拉刷新）收尾
++            // 1. 检查会员等级
++            val response = getMemberCapability()
++            val data = response?.data
++            if (data == null) {
++                Logging.e(TAG, "refreshHome 获取会员能力失败：code=${response?.code}")
++            } else {
++                val newLevel = data.memberLevel
++                val newCapabilities = data.capabilitiesSet.toSet()
++                val wasFree = MemberLevel.isFree(lastMemberLevel)
++                val isFreeNow = MemberLevel.isFree(newLevel)
++                val currentMode = _homeModulesState.value.homeMode
++                // 只有真的需要换首页模式的升降级才弹窗；已经是目标模式就静默更新等级
++                val isUpgrade = wasFree && !isFreeNow && currentMode == HomeMode.STANDARD
++                val isDowngrade = !wasFree && isFreeNow && currentMode == HomeMode.HUNTER
++
++                if (isUpgrade || isDowngrade) {
++                    // 等用户点「我知道了」
++                    val waiter = CompletableDeferred<Unit>()
++                    levelDialogWaiter = waiter
++                    try {
++                        _homeModulesEffect.emit(
++                            HomeModulesEffect.MemberLevelChanged(
++                                isUpgrade = isUpgrade,
++                                newMemberLevel = newLevel,
++                            )
++                        )
++                        waiter.await()
++                    } finally {
++                        if (levelDialogWaiter === waiter) {
++                            levelDialogWaiter = null
++                        }
++                    }
++
++                    // 点击后：切新模式、记录等级与能力，再显示全屏 loading
++                    val targetMode = if (isUpgrade) HomeMode.HUNTER else HomeMode.STANDARD
++                    applyMode(targetMode)
++                    recordMemberLevel(newLevel)
++                    _homeModulesState.update { state ->
++                        state.copy(memberCapabilities = newCapabilities)
++                    }
++                    UserSettingConfig.INSTANCE.memberCapabilities = newCapabilities
++                    _homeModulesEffect.emit(HomeModulesEffect.HomeModelChanged)
++                } else {
++                    // 不需要提示：只更新等级与能力
++                    recordMemberLevel(newLevel)
++                    _homeModulesState.update { state ->
++                        state.copy(memberCapabilities = newCapabilities)
++                    }
++                    UserSettingConfig.INSTANCE.memberCapabilities = newCapabilities
++                }
++            }
++
++            // 2. 拉数据，结束时由 RefreshFinished 收起刷新动画和全屏 loading
++            loadHomeData()
+             _homeModulesEffect.tryEmit(HomeModulesEffect.RefreshFinished)
+-            logPullRefresh(refreshStartTimeStamp)
+-        }
+-    }
+-
+-    /** 继续刷新 */
+-    fun continueRefresh() {
+-        continueRefreshComplete?.complete(Unit)
+-    }
+-
+-    /**
+-     * 首页模式可能在离开首页期间被其他页面直接持久化（如会员尝鲜领取后开启狩猎模式）：
+-     * 回到首页时先按持久化配置兜底同步状态；模式有变化时展示全屏加载，表示本次进入按新模式生效。
+-     * 等级变化检测在模式已同步的状态下执行，升降级弹窗的条件会被当前模式自然抑制，无需额外传参。
+-     */
+-    fun syncHomeModeFromConfig() {
++        }
++    }
++
++    /**
++     * 会员礼包领取后回到首页：领取页已经确认了新等级和新模式。
++     * 先记录等级，本轮不比较、不弹窗，只同步能力，然后按新模式拉数据。
++     */
++    fun onGiftBack(memberLevel: String) {
++        if (levelDialogWaiter != null) return
++        recordMemberLevel(memberLevel)
++        applyMode(HomeMode.fromRaw(UserSettingConfig.INSTANCE.homeMode))
++        showModeLoading()
++
++        refreshJob?.cancel()
++        refreshJob = viewModelScope.launch {
++            getMemberCapability()?.data?.let { data ->
++                val capabilities = data.capabilitiesSet.toSet()
++                _homeModulesState.update { state ->
++                    state.copy(memberCapabilities = capabilities)
++                }
++                UserSettingConfig.INSTANCE.memberCapabilities = capabilities
++            }
++            loadHomeData()
++            _homeModulesEffect.tryEmit(HomeModulesEffect.RefreshFinished)
++        }
++    }
++
++    /** 用户点击「我知道了」或关闭等级弹窗：放行等待中的刷新。 */
++    fun onLevelDialogClosed() {
++        levelDialogWaiter?.complete(Unit)
++    }
++
++    /** 页面销毁：取消刷新和等待，避免残留状态影响下一次进入。 */
++    fun onHomeDestroyed() {
++        levelDialogWaiter = null
++        refreshJob?.cancel()
++    }
++
++    /** 拉首页数据：白名单 → 用户权益 → 设备列表 → 自动切 Hunter → 狩猎/抓拍。 */
++    private suspend fun loadHomeData() {
++        val refreshStartTimeStamp = System.currentTimeMillis()
++        requestUserFunctionList()
++        checkUserRightsHasChange()
++        dataSources?.requestDeviceList()
++        // Hunter 会员 + 标准模式 + 有 T16 设备时自动切狩猎模式，后续狩猎请求按新模式执行
++        if (lastMemberLevel == MemberLevel.HUNTER &&
++            _homeModulesState.value.homeMode == HomeMode.STANDARD &&
++            SharedDataManager.deviceManagerList.any { it.isT16() }
++        ) {
++            applyMode(HomeMode.HUNTER)
++            _homeModulesEffect.emit(HomeModulesEffect.HomeModelChanged)
++        }
++        requestHunting()
++        logPullRefresh(refreshStartTimeStamp)
++    }
++
++    /** 把模式写入页面状态和本地配置；返回模式有没有变化。 */
++    private fun applyMode(homeMode: HomeMode): Boolean {
++        if (_homeModulesState.value.homeMode == homeMode) return false
++        _homeModulesState.update { state -> state.copy(homeMode = homeMode) }
++        UserSettingConfig.INSTANCE.homeMode = homeMode.name
++        return true
++    }
++
++    /** 显示模式切换的全屏 loading；从 onStart 调用时延后派发，确保 collector 已可用。 */
++    private fun showModeLoading() {
+         viewModelScope.launch(Dispatchers.Main) {
+-            val persisted = HomeMode.fromRaw(UserSettingConfig.INSTANCE.homeMode)
+-            if (_homeModulesState.value.homeMode == persisted) return@launch
+-            // 发送模式切换副作用（展示全屏加载）
+             _homeModulesEffect.emit(HomeModulesEffect.HomeModelChanged)
+-            _homeModulesState.update { state -> state.copy(homeMode = persisted) }
+-        }
+-    }
+-
+-    /** 切换到指定首页模式：更新状态并持久化，保证刷新链路与冷启动恢复都按该模式生效。 */
+-    fun switchHomeMode(
+-        homeMode: HomeMode, isRefreshData: Boolean = true
+-    ) {
+-        viewModelScope.launch(Dispatchers.Main) {
+-            if (_homeModulesState.value.homeMode == homeMode) return@launch
+-            // 发送模式切换副作用（展示全屏加载）
+-            _homeModulesEffect.emit(HomeModulesEffect.HomeModelChanged)
+-            // 修改模式并持久化
+-            _homeModulesState.update { state -> state.copy(homeMode = homeMode) }
+-            UserSettingConfig.INSTANCE.homeMode = homeMode.name
+-            if (isRefreshData) {
+-                refreshData()
+-            } else {
+-                delay(1000.milliseconds)
+-                _homeModulesEffect.tryEmit(HomeModulesEffect.RefreshFinished)
+-            }
++        }
++    }
++
++    /** 记录会员等级，作为下次判断升降级的基线。 */
++    private fun recordMemberLevel(memberLevel: String) {
++        lastMemberLevel = memberLevel
++        UserSettingConfig.INSTANCE.memberLevel = memberLevel
++    }
++
++    /** 请求会员等级与能力；网络异常返回 null。 */
++    private suspend fun getMemberCapability() = runCatchingUnlessCancelled {
++        memberRepository.getMemberCapability()
++    }.getOrNull()
++
++    /** 用户主动切换首页模式：切模式、显示全屏 loading，然后按新模式拉数据。 */
++    fun switchHomeMode(homeMode: HomeMode) {
++        if (levelDialogWaiter != null) return
++        if (!applyMode(homeMode)) return
++        showModeLoading()
++        refreshJob?.cancel()
++        refreshJob = viewModelScope.launch {
++            loadHomeData()
++            _homeModulesEffect.tryEmit(HomeModulesEffect.RefreshFinished)
+         }
+     }
+ 
+@@ -266,67 +367,6 @@
+         _homeModulesEffect.tryEmit(HomeModulesEffect.HuntingSwitchFinished)
+     }
+ 
+-    /**
+-     * 判断会员等级有无升降级，并把最新等级与能力集写入本地。
+-     *
+-     * 等级范围序：FREE < HUNTER < HUNTER_PRO。
+-     * 需要升降级提示时发出对应的弹窗副作用，等待用户确认后再更新插槽与刷新。
+-     */
+-    private suspend fun checkMemberHasChange() {
+-        // 对比服务端是否变化，看是否存在升降级
+-        val response = runCatchingUnlessCancelled {
+-            memberRepository.getMemberCapability()
+-        }.getOrNull()
+-        val data = response?.data
+-        if (data == null) {
+-            Logging.e(TAG, "checkMemberHasChange 获取会员能力失败：code=${response?.code}")
+-            return
+-        }
+-        val newMemberLevel = data.memberLevel
+-        val newMemberCapabilities = data.capabilitiesSet.toSet()
+-
+-        // 会员等级相同直接返回
+-        if (lastMemberLevel == newMemberLevel) {
+-            Logging.i(TAG, "checkMemberHasChange 等级未变化=$newMemberLevel")
+-            return
+-        }
+-
+-        // 之前不免费当前免费并且当前首页模式不是标准模式，提示会员降级
+-        val isDowngrade = MemberLevel.isFree(newMemberLevel)
+-                && _homeModulesState.value.homeMode != HomeMode.STANDARD
+-        // 之前免费现在不免费并且当前首页模式不是狩猎模式并且之前没有手动切换到标准模式，提示会员升级
+-        val isForceStandard = _homeModulesState.value.homeMode == HomeMode.STANDARD
+-                && !MemberLevel.isFree(lastMemberLevel)
+-        val isUpgrade = MemberLevel.isFree(lastMemberLevel)
+-                && _homeModulesState.value.homeMode != HomeMode.HUNTER
+-                && !isForceStandard
+-
+-        if (isUpgrade || isDowngrade) {
+-            Logging.i(
+-                TAG,
+-                "checkMemberHasChange 检测到变化：$lastMemberLevel -> $newMemberLevel，升级=$isUpgrade 降级=$isDowngrade，等待用户确认"
+-            )
+-            continueRefreshComplete = CompletableDeferred()
+-            _homeModulesEffect.tryEmit(
+-                HomeModulesEffect.MemberLevelChanged(isUpgrade = isUpgrade, newMemberLevel)
+-            )
+-            // 等待用户确认后继续刷新数据
+-            continueRefreshComplete?.await()
+-
+-            // 发送模式切换副作用
+-            _homeModulesEffect.emit(HomeModulesEffect.HomeModelChanged)
+-            // 修改模式
+-            val homeMode = if (isUpgrade) HomeMode.HUNTER else HomeMode.STANDARD
+-            _homeModulesState.update { state -> state.copy(homeMode = homeMode) }
+-            // 保存配置
+-            UserSettingConfig.INSTANCE.homeMode = homeMode.name
+-        }
+-        _homeModulesState.update { state -> state.copy(memberCapabilities = newMemberCapabilities) }
+-        UserSettingConfig.INSTANCE.memberLevel = newMemberLevel
+-        UserSettingConfig.INSTANCE.memberCapabilities = newMemberCapabilities
+-        lastMemberLevel = newMemberLevel
+-    }
+-
+     /** 检查会员权益是否变化，有变化时发出套餐变化副作用 */
+     private suspend fun checkUserRightsHasChange() {
+         if (!SettingConfig.INSTANCE.userFunctionList.contains(T16_SHARE_GROUP)) {
+@@ -376,17 +416,6 @@
+         }.getOrNull()
+         if (result is Result.Success) {
+             SettingConfig.INSTANCE.userFunctionList = result.data.functionList.toMutableList()
+-        }
+-    }
+-
+-    /** 检查是否自动切换为Hunter模式 */
+-    private fun checkAutoSwitchHunterMode() {
+-        // 如果是Hunter会员并且当前显示的是标准模式，检查如果满足有T16设备时自动切换为狩猎模式
+-        if (lastMemberLevel == MemberLevel.HUNTER
+-            && _homeModulesState.value.homeMode == HomeMode.STANDARD
+-            && SharedDataManager.deviceManagerList.any { it.isT16() }
+-        ) {
+-            switchHomeMode(HomeMode.HUNTER, false)
+         }
+     }
+ 
