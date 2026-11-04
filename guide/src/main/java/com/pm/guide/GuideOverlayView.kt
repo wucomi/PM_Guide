@@ -427,10 +427,7 @@ internal class GuideOverlayView @JvmOverloads constructor(
         customBubbleView = contentView.findViewById(R.id.guide_bubble)
         customArrowView = contentView.findViewById(R.id.guide_arrow)
         (contentView as? ViewGroup)?.clipChildren = false
-        bubble.addView(
-            contentView,
-            LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
-        )
+        bubble.addView(contentView)
     }
 
     /** 解包 CustomBinding 泛型并绑定；create 返回的正是 bind 期望的类型，cast 安全。 */

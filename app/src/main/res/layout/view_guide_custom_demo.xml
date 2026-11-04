@@ -1,13 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="wrap_content"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:clipChildren="false">
+    android:clipChildren="false"
+    android:orientation="vertical">
+
+    <!-- 自定义箭头：按钮色圆点 + 竖线；库按 resolvedSide 旋转 -->
+    <ImageView
+        android:id="@id/guide_arrow"
+        android:layout_width="14dp"
+        android:layout_height="18dp"
+        android:layout_gravity="center_horizontal"
+        android:contentDescription="@null"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_guide_arrow_dot_line"
+        android:tint="?attr/colorPrimary" />
+
     <!-- 库以 guide_bubble 的尺寸和位置应用定位与 overflow -->
     <LinearLayout
         android:id="@id/guide_bubble"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_guide_custom_bubble"
         android:elevation="4dp"
@@ -15,9 +27,7 @@
         android:paddingStart="20dp"
         android:paddingTop="16dp"
         android:paddingEnd="20dp"
-        android:paddingBottom="8dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/guide_arrow">
+        android:paddingBottom="8dp">
 
         <TextView
             android:id="@+id/custom_guide_badge"
@@ -44,10 +54,9 @@
 
         <TextView
             android:id="@+id/custom_guide_message"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="@string/custom_guide_message"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -87,17 +96,4 @@
                 android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
-
-    <!-- 自定义箭头：按钮色圆点 + 竖线；库按 resolvedSide 旋转 -->
-    <ImageView
-        android:id="@id/guide_arrow"
-        android:layout_width="14dp"
-        android:layout_height="18dp"
-        android:contentDescription="@null"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_guide_arrow_dot_line"
-        android:tint="?attr/colorPrimary"
-        app:layout_constraintBottom_toTopOf="@id/guide_bubble"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

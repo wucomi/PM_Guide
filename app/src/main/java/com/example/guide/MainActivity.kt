@@ -1167,7 +1167,8 @@ class MainActivity : AppCompatActivity() {
                                 view.findViewById<View>(R.id.custom_guide_next)
                                     .setOnClickListener { session.next() }
                             },
-                            position = GuidePosition.above()
+                            position = GuidePosition.above(),
+                            maxWidth = GuideWidth.FillScreen
                         )
                     )
                 )
@@ -1176,7 +1177,8 @@ class MainActivity : AppCompatActivity() {
                         anchor = GuideAnchor.ViewAnchor(binding.customContentChipB),
                         tooltip = GuideTooltip(
                             content = customGuideContent,
-                            position = GuidePosition.above()
+                            position = GuidePosition.above(),
+                            maxWidth = GuideWidth.FillScreen
                         )
                     )
                 )
