@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Demo" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/demo_primary</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorSecondary">@color/demo_accent</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+    </style>
+
+    <!-- 全屏 Dialog 主题：windowIsFloating=false 是铺满整屏的前提；
+         windowBackground 透明，背景由内容布局自己控制。
+         targetSdk 36（Android 15+）强制 edge-to-edge，沉浸式（隐藏系统栏）在代码里用
+         WindowInsetsController 实现，见 FullScreenDemoDialogFragment.onStart()；
+         windowFullscreen / statusBarColor 等 API 在 35+ 已不推荐使用 -->
+    <style name="Theme.FullScreenDialog" parent="Theme.Demo">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@style/Animation.FullScreenDialog</item>
+    </style>
+
+    <!-- 全屏 Dialog 的进出场动画：底部滑入、底部滑出。
+         点号命名会隐式继承同名前缀样式，这里显式指定框架的 Animation 为父样式 -->
+    <style name="Animation.FullScreenDialog" parent="android:Animation">
+        <item name="android:windowEnterAnimation">@anim/dialog_slide_in_bottom</item>
+        <item name="android:windowExitAnimation">@anim/dialog_slide_out_bottom</item>
+    </style>
+
+</resources>

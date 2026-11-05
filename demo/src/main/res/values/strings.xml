@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="demo_app_name">PM Guide Demos</string>
+    <string name="demo_home_title">Demo 集合</string>
+    <string name="demo_home_subtitle">独立 demo module，不影响主 app</string>
+    <string name="demo_home_kicker">SAMPLES</string>
+    <string name="demo_home_heading">选择要运行的 Demo</string>
+    <string name="demo_home_body">每个示例各自独立，代码和资源都只属于 demo module，可以单独安装运行。</string>
+    <string name="demo_home_nested_title">嵌套滚动 + 覆盖底栏</string>
+    <string name="demo_home_nested_body">NestedScrollView、两个动态子布局、RecyclerView 与底栏遮挡。</string>
+    <string name="demo_home_video_title">视频首帧</string>
+    <string name="demo_home_video_body">MediaMetadataRetriever 与 Glide 两种方式加载视频首帧。</string>
+    <string name="demo_home_slot_title">Slot 布局 + 覆盖底栏</string>
+    <string name="demo_home_slot_body">复现 slot 显隐时的底栏遮挡与列表侵入，并给出统一外层滚动的写法。</string>
+
+    <!-- NestedScrollView + 底栏遮挡 Demo -->
+    <string name="nested_demo_title">嵌套滚动 Demo</string>
+    <string name="nested_demo_subtitle">内容可滑入底栏下方，末尾不被遮挡</string>
+    <string name="nested_demo_tab_a">布局 A · 纵向内容</string>
+    <string name="nested_demo_tab_b">布局 B · 列表</string>
+
+    <string name="nested_demo_a_kicker">子布局 A</string>
+    <string name="nested_demo_a_title">纯纵向内容</string>
+    <string name="nested_demo_a_subtitle">普通的纵向 LinearLayout，内部可以有任意多个子 View。</string>
+    <string name="nested_demo_a_hero_title">内容可以滑到底栏下面</string>
+    <string name="nested_demo_a_hero_body">底栏是覆盖在滚动区域上的独立 View。NestedScrollView 开启 clipToPadding=false，内容不会被底栏上沿裁掉，而是继续画到底栏背后。</string>
+    <string name="nested_demo_a_card1_title">子布局 A · 纵向容器</string>
+    <string name="nested_demo_a_card1_body">普通 View 依次排布，没有自己的滚动。内容再长，也由外层 NestedScrollView 统一滚动。</string>
+    <string name="nested_demo_a_card2_title">滚动范围包含底栏区域</string>
+    <string name="nested_demo_a_card2_body">底栏是半透明的，滚动时能直接看到卡片从底栏后面透出来，而不是在底栏上沿被切掉。</string>
+    <string name="nested_demo_a_card3_title">paddingBottom 负责末尾留白</string>
+    <string name="nested_demo_a_card3_body">底部 padding 不裁剪内容，但会被算进滚动范围，因此最后的内容能停到底栏上方。</string>
+    <string name="nested_demo_a_card4_title">底栏高度是运行时算的</string>
+    <string name="nested_demo_a_card4_body">在 onLayoutChange 里读取底栏实际高度，再设置 paddingBottom，适配不同文案和字号。</string>
+    <string name="nested_demo_a_card5_title">两个子布局轮流显示</string>
+    <string name="nested_demo_a_card5_body">两个子布局都已 inflate，只把当前选中的设为 VISIBLE，另一个 GONE，所以隐藏内容不占高度。</string>
+    <string name="nested_demo_a_end">滚动到底：这段文字完整停在底栏上方。</string>
+
+    <string name="nested_demo_b_kicker">子布局 B</string>
+    <string name="nested_demo_b_title">头部内容 + RecyclerView</string>
+    <string name="nested_demo_b_body">上面先放一段头部内容，下面的列表容器占满剩余高度。切换列表项数量，观察列表少时容器仍然撑满，多时整体一起滚动。</string>
+    <string name="nested_demo_count_none">0 项</string>
+    <string name="nested_demo_count_three">3 项</string>
+    <string name="nested_demo_count_long">20 项</string>
+    <string name="nested_demo_list_title">RecyclerView</string>
+    <string name="nested_demo_list_count">共 %1$d 项</string>
+    <string name="nested_demo_list_empty">当前 0 项。列表容器仍占满剩余高度，底部 padding 保证它不会伸进底栏被裁掉。</string>
+    <string name="nested_demo_item_title">列表项 %1$d</string>
+    <string name="nested_demo_item_subtitle">跟随外层 NestedScrollView 一起滚动</string>
+
+    <!-- 视频首帧 Demo -->
+    <string name="video_first_frame_title">视频首帧</string>
+    <string name="video_first_frame_url_hint">视频 URL</string>
+    <string name="video_first_frame_url_required">请输入视频 URL</string>
+    <string name="video_first_frame_default_url" translatable="false">https://www.w3schools.com/html/mov_bbb.mp4</string>
+    <string name="video_first_frame_load_retriever">MediaMetadataRetriever 加载首帧</string>
+    <string name="video_first_frame_load_glide">Glide 加载首帧</string>
+    <string name="video_first_frame_empty">首帧会显示在这里</string>
+    <string name="video_first_frame_preview_desc">视频首帧预览</string>
+    <string name="video_first_frame_status">两种实现都取第 0 微秒的关键帧：MediaMetadataRetriever 按需流式读取；Glide 用 frameOf(0) 一行加载。</string>
+    <string name="video_first_frame_loading">正在加载首帧…</string>
+    <string name="video_first_frame_success">已显示首帧：%1$d × %2$d</string>
+    <string name="video_first_frame_failed">首帧加载失败：%1$s</string>
+    <string name="video_first_frame_failed_generic">未知错误</string>
+    <string name="video_first_frame_no_frame">这个视频没有可用的帧</string>
+
+    <!-- Slot + 底栏 Demo -->
+    <string name="slot_demo_title">Slot 布局 + 底栏</string>
+    <string name="slot_demo_subtitle">复现并修复首页 slot 的遮挡问题</string>
+    <string name="slot_demo_kicker">HOME SLOTS</string>
+    <string name="slot_demo_heading">动态 Slot 首页</string>
+    <string name="slot_demo_intro">slot1-4 是普通的 wrap_content 内容，slot5 是设备列表。切换底栏场景：隐藏 slot5 时看 slot4 滚到底是否被遮挡；隐藏 slot1-3 时看设备列表能否侵入底栏。</string>
+    <string name="slot_demo_slot1_title">Slot 1 · 常用设备</string>
+    <string name="slot_demo_slot1_body">普通内容，不参与内部滚动。这里用固定的多行文案撑出高度，模拟首页里多个可插拔能力插槽叠在一起的效果。</string>
+    <string name="slot_demo_slot2_title">Slot 2 · 快捷入口</string>
+    <string name="slot_demo_slot2_body">slot 可以是任意动态内容。重点是保持 wrap_content，让它们的高度由内容决定，而不是被外层滚动容器强行撑满或裁剪。</string>
+    <string name="slot_demo_slot3_title">Slot 3 · 消息提醒</string>
+    <string name="slot_demo_slot3_body">如果某个 slot 自己再套一层 RecyclerView 或 SmartRefreshLayout，要把内部滚动关掉，否则手势会被内层吃掉，外层就滚不动了。</string>
+    <string name="slot_demo_slot4_title">Slot 4 · 服务与设置</string>
+    <string name="slot_demo_slot4_body">它是 slot5 上方的最后一块内容。隐藏 slot5 后滚到底，这段文字必须完整停在底栏上方，说明底部 padding 预留正确。</string>
+    <string name="slot_demo_slot5_title">Slot 5 · 设备列表</string>
+    <string name="slot_demo_count_format">共 %1$d 台</string>
+    <string name="slot_demo_empty">当前 0 台设备。slot5 仍然占满剩余高度，末尾不会被底栏遮挡。</string>
+    <string name="slot_demo_device_title">设备 %1$d</string>
+    <string name="slot_demo_device_subtitle">模拟设备列表项，跟随外层统一滚动</string>
+    <string name="slot_demo_count_none">0 台</string>
+    <string name="slot_demo_count_three">3 台</string>
+    <string name="slot_demo_count_long">20 台</string>
+    <string name="slot_demo_scenario_all">全部显示</string>
+    <string name="slot_demo_scenario_hide_slot5">隐藏 Slot5</string>
+    <string name="slot_demo_scenario_hide_top">隐藏 Slot1-3</string>
+
+    <!-- 全屏 Dialog Demo -->
+    <string name="demo_home_fullscreen_title">全屏弹窗</string>
+    <string name="demo_home_fullscreen_body">DialogFragment 与传统 Dialog 两种实现，覆盖整屏并带底部滑入滑出动画。</string>
+    <string name="full_screen_dialog_title">全屏 Dialog Demo</string>
+    <string name="full_screen_dialog_title_fragment">DialogFragment 版（推荐）</string>
+    <string name="full_screen_dialog_title_plain">传统 Dialog 版</string>
+    <string name="full_screen_dialog_heading_fragment">全屏 Dialog（DialogFragment 版）</string>
+    <string name="full_screen_dialog_heading_plain">全屏 Dialog（传统 Dialog 版）</string>
+    <string name="full_screen_dialog_close">✕</string>
+    <string name="full_screen_dialog_confirm">确 定</string>
+    <string name="full_screen_dialog_body">这是一个覆盖整屏、已开启沉浸式的 Dialog（状态栏和导航栏已隐藏，从屏幕边缘下滑可临时唤出）。要点：\n\n1. 主题里 windowIsFloating=false，否则 Dialog 依旧是浮动小窗；\n\n2. show 之后把 window 宽高 setLayout(MATCH_PARENT, MATCH_PARENT)，否则默认按内容包裹；\n\n3. targetSdk 36（Android 15+）强制 edge-to-edge，沉浸式用 WindowCompat.setDecorFitsSystemWindows(window, false) 加 WindowInsetsController 隐藏系统栏，不要再依赖 windowFullscreen；\n\n4. 挖孔/刘海屏：状态栏隐藏后 DEFAULT cutout 模式会保留挖孔区，必须设 layoutInDisplayCutoutMode=SHORT_EDGES，否则顶部会留出一条不被 Dialog 覆盖的空隙。\n\nDialogFragment 版本由 FragmentManager 托管，旋转屏幕后自动恢复，优先使用。</string>
+</resources>

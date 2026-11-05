@@ -24,4 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "PM_Guide"
 include ':app'
+include ':demo'
 include ':guide'
